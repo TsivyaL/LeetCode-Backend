@@ -17,13 +17,13 @@ func SetupDB() error {
 
     client, err := mongo.Connect(context.TODO(), clientOptions)
     if err != nil {
-        return err
-    }
-
+		log.Fatal("Failed to connect to MongoDB:", err)    
+	}
+	log.Println("MongoDB client created")
     // בדיקה שהחיבור הצליח
     err = client.Ping(context.TODO(), nil)
     if err != nil {
-        return err
+        log.Fatal("Cannot connect to MongoDB:", err)
     }
 
     MongoClient = client

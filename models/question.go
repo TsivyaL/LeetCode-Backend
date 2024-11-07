@@ -7,6 +7,7 @@ type Question struct {
 	Title   string    `json:"title" bson:"title"`
 	Body    string    `json:"body" bson:"body"`
 	Answer  string    `json:"answer" bson:"answer"`
+	
 	//Created time.Time `json:"created" bson:"created"`
 	
 }

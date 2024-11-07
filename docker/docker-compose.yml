@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: my_mongo_db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=TsivyaL
+      - MONGO_INITDB_ROOT_PASSWORD=MyName1sTsivya
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always  # אם המיכל יקרוס, יתחיל מחדש
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile-go  # בונה את השרת שלך לפי ה-Dockerfile של Go
+    container_name: backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017
+    depends_on:
+      - mongodb  # ההשרת תלוי במונגו DB שיתחיל לפניו
+    restart: always
+
+  version: '3.8'
+
+
+  python:
+    image: python:latest
+    container_name: python-container
+    volumes:
+      - answer-volume:/tmp  # יצירת volume לדוקר עצמו, ושיתוף תיקיית /tmp במיכל
+    command: python3 /tmp/answer.py  # מריץ את הקובץ בתוך המיכל
+    restart: on-failure
+
+volumes:
+  answer-volume:  # Volume פנימי שמנוהל על ידי דוקר

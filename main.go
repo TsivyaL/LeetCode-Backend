@@ -23,6 +23,7 @@ func main() {
 	services.SetupDB()
 	// הגדרת ה-Routes
 	routes.SetupRoutes(r)
+	routes.SetupAnswerRoutes(r)
 
 	// הרצת השרת
 	if err := r.Run(":8080"); err != nil {
