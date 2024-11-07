@@ -15,6 +15,7 @@ var MongoClient *mongo.Client
 
 // SetupDB מחבר את האפליקציה למסד הנתונים
 func SetupDB() {
+	
     clientOptions := options.Client().ApplyURI("mongodb://TsivyaL:MyName1sTsivya@localhost:27017")
     client, err := mongo.Connect(context.Background(), clientOptions) // תחבר את האפליקציה למסד נתונים
     if err != nil {
@@ -23,7 +24,7 @@ func SetupDB() {
 
     err = client.Ping(context.Background(), nil) // בדוק אם החיבור הצליח
     if err != nil {
-        log.Fatal(err)
+        log.Fatal("Cannot connect to MongoDB:", err)
     }
 
     MongoClient = client

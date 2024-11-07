@@ -3,24 +3,24 @@ package main
 import (
 	"fmt"
 	"log"
-	"Backend/controllers"
+	"Backend/services"
 	"Backend/routes"
 
 	"github.com/gin-gonic/gin"
-	"net/http"
+	//"net/http"
 )
 
 func main() {
 	r := gin.Default()
 
 	// חיבור ל-DB
-	controllers.SetupDB()
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Welcome to the Questions API!",
-		})
-	})
-
+	// controllers.SetupDB()
+	// r.GET("/", func(c *gin.Context) {
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"message": "Welcome to the Questions API!",
+	// 	})
+	// })
+	services.SetupDB()
 	// הגדרת ה-Routes
 	routes.SetupRoutes(r)
 
