@@ -1,47 +1,33 @@
 package main
 
 import (
-    "context"
-    "fmt"
-    "log"
-    //"time"
+	"fmt"
+	"log"
+	"Backend/controllers"
+	"Backend/routes"
 
-    "go.mongodb.org/mongo-driver/mongo"
-    "go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 func main() {
-    // יצירת הקשר והגדרת כתובת השרת
-    clientOptions := options.Client().ApplyURI("mongodb://TsivyaL:MyName1sTsivy@@localhost:27017")
+	r := gin.Default()
 
-    // חיבור ל-MongoDB
-    client, err := mongo.Connect(context.TODO(), clientOptions)
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer client.Disconnect(context.TODO())
+	// חיבור ל-DB
+	controllers.SetupDB()
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Welcome to the Questions API!",
+		})
+	})
 
-    // בדיקה שהחיבור פעיל
-    err = client.Ping(context.TODO(), nil)
-    if err != nil {
-        log.Fatal("לא ניתן להתחבר ל-MongoDB:", err)
-    }
+	// הגדרת ה-Routes
+	routes.SetupRoutes(r)
 
-    fmt.Println("חיבור ל-MongoDB הצליח!")
+	// הרצת השרת
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal("Error starting server: ", err)
+	}
 
-    // גישה למסד נתונים ואוסף (Collection) לדוגמה
-    collection := client.Database("testdb").Collection("users")
-
-    // דוגמה להוספת מסמך לאוסף
-    user := map[string]interface{}{
-        "name": "John Doe",
-        "email": "johndoe@example.com",
-        "age": 29,
-    }
-    insertResult, err := collection.InsertOne(context.TODO(), user)
-    if err != nil {
-        log.Fatal("שגיאה בהוספת מסמך:", err)
-    }
-
-    fmt.Println("מסמך נוסף בהצלחה עם ID:", insertResult.InsertedID)
+	fmt.Println("Server is running on port 8080")
 }
