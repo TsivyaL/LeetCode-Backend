@@ -1,96 +1,78 @@
 package services
 
 import (
-	//"context"
+	"context"
 	"errors"
-	//"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
-
 	"Backend/models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // ExecuteAnswer יקבל קוד של תשובה ויבצע אותו בתוך מיכל Docker
 // תיקון ב-ExecuteAnswer
 func ExecuteAnswer(answer models.Answer) (bool, error) {
 	// בודקים את סוג השפה (Python / Go) של הקוד שהמשתמש שלח
+	question, err := GetQuestionByID(answer.QuestionID)
+	if err != nil {
+		return false, err
+	}
+
 	if strings.Contains(answer.Language, "python") {  // השתמש בשדה Language
 		result, err := runPythonCode(answer.Code)
 		if err != nil {
 			return false, err
 		}
-		return result, nil
+		return strings.Contains(result,question.Answer), nil
 	} else if strings.Contains(answer.Language, "go") {  // השתמש בשדה Language
 		result, err := runGoCode(answer.Code)
 		if err != nil {
 			return false, err
 		}
-		return result, nil
+		return strings.Contains(result,question.Answer), nil
 	}
 
 	return false, errors.New("Unsupported language")
 }
+func GetQuestionByID(id string) (models.Question, error) {
+    var question models.Question
+    err := QuestionsCollection.FindOne(context.TODO(), bson.D{{"_id", id}}).Decode(&question)
+    if err != nil {
+        if err == mongo.ErrNoDocuments {
+            return question, errors.New("question not found")
+        }
+        return question, err
+    }
+    return question, nil
+}
 
-
-func runPythonCode(code string) (bool, error) {
-	// ניצור קובץ קוד פייתון בתוך ה-volume
-	file, err := os.Create("/tmp/answer.py")  // ייווצר בתוך ה-volume המשותף במיכל
-	if err != nil {
-		log.Printf("Error creating Python file: %s", err)  // לוג שגיאה
-		return false, err
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(code)
-	if err != nil {
-		log.Printf("Error writing Python code to file: %s", err)  // לוג שגיאה
-		return false, err
-	}
-
-	// נריץ את קוד הפייתון בתוך מיכל דוקר
-	cmd := exec.Command("docker", "run", "--rm", "-v", "answer-volume:/tmp", "python:latest", "python3", "/tmp/answer.py")
+func runPythonCode(code string) (string, error) {
+	// נריץ את קוד הפייתון ישירות במיכל של דוקר בלי קובץ מקומי
+	cmd := exec.Command("docker", "run", "--rm", "python:latest", "python3", "-c", code)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Error running Python code: %s", err)  // לוג שגיאה
-		return false, err
+		log.Printf("Error running Python code: %s", err)
+		return "false", err
 	}
 
-	log.Printf("Python code output: %s", string(output))  // לוג פלט
-	if strings.Contains(string(output), "Correct") {
-		return true, nil
-	}
+	log.Printf("Python code output: %s", string(output))
+	return string(output) ,nil
 
-	return false, nil
+	
 }
 
 
-func runGoCode(code string) (bool, error) {
-	// ניצור קובץ קוד Go בזמן ריצה
-	file, err := os.Create("/tmp/answer.go")
-	if err != nil {
-		return false, err
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(code)
-	if err != nil {
-		return false, err
-	}
-
-	// נריץ את קוד ה-Go בתוך מיכל דוקר
-	cmd := exec.Command("docker", "run", "--rm", "-v", "/tmp:/tmp", "golang:latest", "go", "run", "/tmp/answer.go")
+func runGoCode(code string) (string, error) {
+	// הפעלת קוד Go ישירות במיכל של דוקר בלי יצירת קובץ פיזי
+	cmd := exec.Command("docker", "run", "--rm", "golang:latest", "go", "run", "-e", code)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error running Go code: %s", err)
-		return false, err
+		return "false", err
 	}
 
-	// נניח שנבדוק אם יש פלט מדויק
-	if strings.Contains(string(output), "Correct") {
-		return true, nil
-	}
-
-	return false, nil
+	log.Printf("Go code output: %s", string(output))
+	return string(output) ,nil
 }

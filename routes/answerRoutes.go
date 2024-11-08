@@ -6,5 +6,5 @@ import (
 )
 
 func SetupAnswerRoutes(r *gin.Engine) {
-	r.POST("/answers", controllers.SubmitAnswer)
+	r.POST("/answers/:question_id", controllers.SubmitAnswer)
 }
