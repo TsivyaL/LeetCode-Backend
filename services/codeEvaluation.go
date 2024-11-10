@@ -2,7 +2,7 @@ package services
 
 import (
 	"Backend/models"
-	"context"
+	//"context"
 	"errors"
 	"fmt"
 	"log"
@@ -60,7 +60,7 @@ def solution(%s):
     %s
 result = solution(%v)
 print(result)
-`, signature, code, inputs[0])
+`, signature, code, formatInputs(inputs))
 log.Printf(codeWithInput)
 	// נריץ את קוד הפייתון ישירות במיכל של דוקר
 	cmd := exec.Command("docker", "run", "--rm", "python:latest", "python3", "-c", codeWithInput)
@@ -82,7 +82,7 @@ function solution(%s) {
     %s;
 }
 console.log(solution(%v));
-`, signature, code, inputs[0])
+`, signature, code, formatInputs(inputs))
 
     log.Printf(codeWithInput)
 
@@ -97,4 +97,12 @@ console.log(solution(%v));
 
     log.Printf("JavaScript code output: %s", string(output))
     return string(output), nil
+}
+func formatInputs(inputs []interface{}) string {
+	var formattedInputs []string
+	for _, input := range inputs {
+		// נהפוך את כל קלט לערך מחרוזת (כך ניתן להשתמש בו ב-JS)
+		formattedInputs = append(formattedInputs, fmt.Sprintf("%v", input))
+	}
+	return strings.Join(formattedInputs, ", ")
 }
