@@ -9,50 +9,61 @@ import (
 	"os/exec"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	//"go.mongodb.org/mongo-driver/bson"
+	//"go.mongodb.org/mongo-driver/mongo"
 )
 
 // ExecuteAnswer יקבל קוד של תשובה ויבצע אותו בתוך מיכל Docker
-// תיקון ב-ExecuteAnswer
 func ExecuteAnswer(answer models.Answer) (bool, error) {
-	// בודקים את סוג השפה (Python / Go) של הקוד שהמשתמש שלח
-	question, err := GetQuestionByID(answer.QuestionID)
+	// בודקים את סוג השפה (Python / Go / C#) של הקוד שהמשתמש שלח
+	question, err := FetchQuestionByID(answer.QuestionID)
 	if err != nil {
 		return false, err
 	}
 
-	if strings.Contains(answer.Language, "python") {  // השתמש בשדה Language
-		result, err := runPythonCode(answer.Code)
+	// נבדוק אם השפה היא פייתון
+	if strings.Contains(answer.Language, "python") {
+		result, err := runPythonCode(answer.Code, question.FunctionSignature, question.Inputs)
 		if err != nil {
 			return false, err
 		}
-		return strings.Contains(result,question.Answer), nil
-	} else if strings.Contains(answer.Language, "c#") {  // השתמש בשדה Language
-		result, err := runCSharpCode(answer.Code)
+		// השוואת התוצאה עם פלט צפוי
+		return checkOutputs(result, question.ExpectedOutputs), nil
+	} else if strings.Contains(answer.Language, "js") {
+		result, err := runJavaScriptCode(answer.Code, question.FunctionSignature, question.Inputs)
 		if err != nil {
 			return false, err
 		}
-		return strings.Contains(result,question.Answer), nil
+		// השוואת התוצאה עם פלט צפוי
+		return checkOutputs(result, question.ExpectedOutputs), nil
 	}
 
 	return false, errors.New("Unsupported language")
 }
-func GetQuestionByID(id string) (models.Question, error) {
-    var question models.Question
-    err := QuestionsCollection.FindOne(context.TODO(), bson.D{{"_id", id}}).Decode(&question)
-    if err != nil {
-        if err == mongo.ErrNoDocuments {
-            return question, errors.New("question not found")
-        }
-        return question, err
-    }
-    return question, nil
+
+// פונקציה להשוואת פלט התשובה עם הציפיות
+func checkOutputs(result string, ExpectedOutputs []interface{}) bool {
+	// נוודא שהתוצאה תואמת לציפיות
+	for _, expectedOutput := range ExpectedOutputs {
+		if !strings.Contains(result, fmt.Sprintf("%v", expectedOutput)) {
+			return false
+		}
+	}
+	return true
 }
 
-func runPythonCode(code string) (string, error) {
-	// נריץ את קוד הפייתון ישירות במיכל של דוקר בלי קובץ מקומי
-	cmd := exec.Command("docker", "run", "--rm", "python:latest", "python3", "-c", code)
+// הפונקציה להרצת קוד פייתון
+func runPythonCode(code string, signature string, inputs []interface{}) (string, error) {
+	// נשלב את הקוד עם הקלטים שהמשתמש שלח
+	codeWithInput := fmt.Sprintf(`
+def solution(%s):
+    %s
+result = solution(%v)
+print(result)
+`, signature, code, inputs[0])
+log.Printf(codeWithInput)
+	// נריץ את קוד הפייתון ישירות במיכל של דוקר
+	cmd := exec.Command("docker", "run", "--rm", "python:latest", "python3", "-c", codeWithInput)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error running Python code: %s", err)
@@ -60,32 +71,30 @@ func runPythonCode(code string) (string, error) {
 	}
 
 	log.Printf("Python code output: %s", string(output))
-	return string(output) ,nil
-
-	
-}
-
-func runCSharpCode(code string) (string, error) {
-	// נריץ את קוד ה-C# ישירות במיכל של דוקר
-	cmd := exec.Command("docker", "run", "--rm", "mcr.microsoft.com/dotnet/sdk:7.0", "bash", "-c", fmt.Sprintf("echo '%s' > /tmp/answer.cs && dotnet new console -o /tmp/csharp-app && cd /tmp/csharp-app && dotnet run", code))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error running C# code: %s", err)
-		return "false", err
-	}
-
-	log.Printf("C# code output: %s", string(output))
 	return string(output), nil
 }
-// func runGoCode(code string) (string, error) {
-// 	// הפעלת קוד Go ישירות במיכל של דוקר בלי יצירת קובץ פיזי
-// 	cmd := exec.Command("docker", "run", "--rm", "golang:latest", "go", "run", "-e", code)
-// 	output, err := cmd.CombinedOutput()
-// 	if err != nil {
-// 		log.Printf("Error running Go code: %s", err)
-// 		return "false", err
-// 	}
 
-// 	log.Printf("Go code output: %s", string(output))
-// 	return string(output) ,nil
-// }
+// הפונקציה להרצת קוד C#
+func runJavaScriptCode(code string, signature string, inputs []interface{}) (string, error) {
+    // נשלב את הקוד עם הקלטים
+    codeWithInput := fmt.Sprintf(`
+function solution(%s) {
+    %s;
+}
+console.log(solution(%v));
+`, signature, code, inputs[0])
+
+    log.Printf(codeWithInput)
+
+    // נריץ את הקוד ישירות במיכל עם Node.js
+    cmd := exec.Command("docker", "run", "--rm", "node:18", "node", "-e", codeWithInput)
+
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        log.Printf("Error running JavaScript code: %s\nOutput: %s", err, string(output))
+        return "false", err
+    }
+
+    log.Printf("JavaScript code output: %s", string(output))
+    return string(output), nil
+}

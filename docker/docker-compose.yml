@@ -31,13 +31,15 @@ services:
       - answer-volume:/tmp
     command: python3 /tmp/answer.py
     restart: on-failure
-  csharp:
-    image: mcr.microsoft.com/dotnet/sdk:7.0
-    container_name: csharp-container
+
+  nodejs:
+    image: nodejs-runner  # השם שניתן ל-image שנבנה עבור Node.js
+    container_name: nodejs-container
     volumes:
       - answer-volume:/tmp
-    command: bash -c "echo '$CODE' > /tmp/answer.cs && dotnet new console -o /tmp/csharp-app && cd /tmp/csharp-app && dotnet run"
+    command: node /tmp/answer.js
     restart: on-failure
+
 volumes:
   answer-volume:
   mongo-data:
