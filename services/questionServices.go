@@ -1,16 +1,17 @@
-// services/services.go
 package services
 
 import (
-    "context"
-    "errors"
-    "Backend/models"
-    "go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	"Backend/models"
+	"context"
+	"errors"
 
-    //"log"
+	//"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson/primitive" // Import for ObjectId conversion
 )
 
+// FetchAllQuestions fetches all questions from the database
 func FetchAllQuestions() ([]models.Question, error) {
     var questions []models.Question
     cursor, err := QuestionsCollection.Find(context.TODO(), bson.D{})
@@ -19,6 +20,7 @@ func FetchAllQuestions() ([]models.Question, error) {
     }
     defer cursor.Close(context.TODO())
 
+    // Loop through all questions in the cursor
     for cursor.Next(context.TODO()) {
         var question models.Question
         if err := cursor.Decode(&question); err != nil {
@@ -30,9 +32,18 @@ func FetchAllQuestions() ([]models.Question, error) {
     return questions, nil
 }
 
+// FetchQuestionByID fetches a single question by its ID
 func FetchQuestionByID(id string) (models.Question, error) {
     var question models.Question
-    err := QuestionsCollection.FindOne(context.TODO(), bson.D{{"_id", id}}).Decode(&question)
+
+    // Convert string ID to ObjectId
+    objID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return question, errors.New("invalid ObjectId format")
+    }
+
+    // Query the question by its ObjectId
+    err = QuestionsCollection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&question)
     if err != nil {
         if err == mongo.ErrNoDocuments {
             return question, errors.New("question not found")
@@ -42,21 +53,47 @@ func FetchQuestionByID(id string) (models.Question, error) {
     return question, nil
 }
 
+// AddQuestion adds a new question to the database
 func AddQuestion(question models.Question) error {
-    _, err := QuestionsCollection.InsertOne(context.TODO(), question)
-    return err
+    // Convert the string ID to ObjectId if necessary
+    if question.ID.IsZero() {
+		question.ID = primitive.NewObjectID() // יצירת ObjectId חדש
+	}
+
+	_, err := QuestionsCollection.InsertOne(context.TODO(), question)
+	return err
+  
 }
 
+// UpdateQuestion updates an existing question in the database
 func UpdateQuestion(id string, updatedQuestion models.Question) error {
-    _, err := QuestionsCollection.UpdateOne(
+    // Convert string ID to ObjectId
+    objID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return errors.New("invalid ObjectId format")
+    }
+
+    _, err = QuestionsCollection.UpdateOne(
         context.TODO(),
-        bson.D{{"_id", id}},
-        bson.D{{"$set", updatedQuestion}},
+        bson.M{"_id": objID}, // Use ObjectId for matching
+        bson.M{"$set": updatedQuestion},
     )
     return err
 }
 
+// DeleteQuestion deletes a question by its ID
 func DeleteQuestion(id string) error {
-    _, err := QuestionsCollection.DeleteOne(context.TODO(), bson.D{{"_id", id}})
+    // Convert string ID to ObjectId
+    objID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return errors.New("invalid ObjectId format")
+    }
+
+    _, err = QuestionsCollection.DeleteOne(context.TODO(), bson.M{"_id": objID})
     return err
+}
+func DeleteAllQuestions() error {
+	// Delete all documents in the collection
+	_, err := QuestionsCollection.DeleteMany(context.TODO(), bson.D{})
+	return err
 }

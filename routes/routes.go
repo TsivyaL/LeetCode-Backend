@@ -11,4 +11,5 @@ func SetupRoutes(r *gin.Engine) {
 	r.POST("/questions", controllers.CreateQuestion)
 	r.PUT("/questions/:id", controllers.UpdateQuestion)
 	r.DELETE("/questions/:id", controllers.DeleteQuestion)
+	r.DELETE("/questions", controllers.DeleteAllQuestions)
 }

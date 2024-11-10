@@ -1,14 +1,16 @@
 package controllers
 
 import (
-	"context"  // ייבוא החבילה חסרה
-	"log"
-	"Backend/services"
 	"Backend/models"
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"          // ייבוא חבילה לחיבור ל-MongoDB
-	"go.mongodb.org/mongo-driver/mongo/options" // ייבוא חבילה לחיבור ל-MongoDB
+	"Backend/services"
+	"context" // ייבוא החבילה חסרה
+	"log"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"         // ייבוא חבילה לחיבור ל-MongoDB
+	"go.mongodb.org/mongo-driver/mongo/options" // ייבוא חבילה לחיבור ל-MongoDB
 )
 
 var MongoClient *mongo.Client
@@ -31,6 +33,7 @@ func SetupDB() {
     log.Println("Connected to MongoDB!")
 }
 
+// GetQuestions retrieves all questions from the database
 func GetQuestions(c *gin.Context) {
 	questions, err := services.FetchAllQuestions()
 	if err != nil {
@@ -40,21 +43,28 @@ func GetQuestions(c *gin.Context) {
 	c.JSON(http.StatusOK, questions)
 }
 
+// GetQuestion retrieves a single question by ID
 func GetQuestion(c *gin.Context) {
 	id := c.Param("id")
 	question, err := services.FetchQuestionByID(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Question not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, question)
 }
 
+// CreateQuestion creates a new question in the database
 func CreateQuestion(c *gin.Context) {
 	var question models.Question
 	if err := c.ShouldBindJSON(&question); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// אם לא מסרת ID, צור אחד אוטומטית
+	if question.ID.IsZero() {  // אם ה־ObjectId ריק
+		question.ID = primitive.NewObjectID()  // יצירת ID חדש בעזרת ObjectId
 	}
 
 	if err := services.AddQuestion(question); err != nil {
@@ -65,6 +75,7 @@ func CreateQuestion(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Question created"})
 }
 
+// UpdateQuestion updates an existing question
 func UpdateQuestion(c *gin.Context) {
 	id := c.Param("id")
 	var updatedQuestion models.Question
@@ -81,6 +92,7 @@ func UpdateQuestion(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Question updated"})
 }
 
+// DeleteQuestion deletes a question by ID
 func DeleteQuestion(c *gin.Context) {
 	id := c.Param("id")
 	if err := services.DeleteQuestion(id); err != nil {
@@ -88,4 +100,11 @@ func DeleteQuestion(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Question deleted"})
+}
+func DeleteAllQuestions(c *gin.Context) {
+	if err := services.DeleteAllQuestions(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "All questions deleted"})
 }

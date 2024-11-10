@@ -1,11 +1,13 @@
 package models
 
+import "go.mongodb.org/mongo-driver/bson/primitive"
+
 // Question מייצגת שאלה במערכת עם קלטים ופלטים צפויים
 type Question struct {
-    ID              string        `json:"id" bson:"_id"`                // מזהה השאלה
-    Title           string        `json:"title" bson:"title"`          // כותרת השאלה
-    Body            string        `json:"body" bson:"body"`            // גוף השאלה
-    Inputs          []interface{} `json:"inputs" bson:"inputs"`        // קלטים שהמשתמש ישתמש בהם (יכולים להיות מסוגים שונים)
-    ExpectedOutputs []interface{} `json:"expected_outputs" bson:"expected_outputs"` // פלטים צפויים (יכולים להיות מסוגים שונים)
-    FunctionSignature string      `json:"function_signature" bson:"function_signature"` // מיני-תיאור של הפונקציה (כמו שם הפונקציה והפרמטרים שלה)
+    ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+    Title            string              `json:"title"`
+    Body             string              `json:"body"`
+    Inputs           [][]interface{}     `json:"inputs"`  // מערך של מערכים
+    ExpectedOutputs  []interface{}       `json:"expected_outputs"`
+    FunctionSignature string             `json:"function_signature"`
 }

@@ -3,7 +3,7 @@ package services
 import (
 	"Backend/models"
 	//"context"
-	"errors"
+	//"errors"
 	"fmt"
 	"log"
 	"os/exec"
@@ -15,42 +15,50 @@ import (
 
 // ExecuteAnswer יקבל קוד של תשובה ויבצע אותו בתוך מיכל Docker
 func ExecuteAnswer(answer models.Answer) (bool, error) {
-	// בודקים את סוג השפה (Python / Go / C#) של הקוד שהמשתמש שלח
+	// בודקים את סוג השפה (Python / JS) של הקוד שהמשתמש שלח
 	question, err := FetchQuestionByID(answer.QuestionID)
 	if err != nil {
 		return false, err
 	}
 
 	// נבדוק אם השפה היא פייתון
-	if strings.Contains(answer.Language, "python") {
-		result, err := runPythonCode(answer.Code, question.FunctionSignature, question.Inputs)
-		if err != nil {
-			return false, err
+	for i, input := range question.Inputs {
+		var result string
+		var errRun error
+
+		if strings.Contains(answer.Language, "python") {
+			result, errRun = runPythonCode(answer.Code, question.FunctionSignature, input)
+		} else if strings.Contains(answer.Language, "js") {
+			result, errRun = runJavaScriptCode(answer.Code, question.FunctionSignature, input)
 		}
-		// השוואת התוצאה עם פלט צפוי
-		return checkOutputs(result, question.ExpectedOutputs), nil
-	} else if strings.Contains(answer.Language, "js") {
-		result, err := runJavaScriptCode(answer.Code, question.FunctionSignature, question.Inputs)
-		if err != nil {
-			return false, err
+
+		if errRun != nil {
+			return false, errRun
 		}
-		// השוואת התוצאה עם פלט צפוי
-		return checkOutputs(result, question.ExpectedOutputs), nil
+
+		// בדיקת תוצאה מול הפלט הצפוי עבור כל אינפוט
+		isPassed, message := checkSingleTest(result, input, question.ExpectedOutputs[i])
+		if !isPassed {
+			log.Printf("Test %d failed: %s", i+1, message)
+			return false, nil
+		}
 	}
 
-	return false, errors.New("Unsupported language")
+	log.Printf("All tests passed successfully!")
+	return true, nil
 }
+
 
 // פונקציה להשוואת פלט התשובה עם הציפיות
-func checkOutputs(result string, ExpectedOutputs []interface{}) bool {
-	// נוודא שהתוצאה תואמת לציפיות
-	for _, expectedOutput := range ExpectedOutputs {
-		if !strings.Contains(result, fmt.Sprintf("%v", expectedOutput)) {
-			return false
-		}
+// פונקציה לבדוק כל אינפוט בנפרד מול הפלט הצפוי
+func checkSingleTest(result string, inputSet []interface{}, expectedOutput interface{}) (bool, string) {
+	// נוודא שהתוצאה מתאימה לפלט הצפוי
+	if !strings.Contains(result, fmt.Sprintf("%v", expectedOutput)) {
+		return false, fmt.Sprintf("Input set: %v\nExpected output: %v\nReceived output: %v", inputSet, expectedOutput, result)
 	}
-	return true
+	return true, ""
 }
+
 
 // הפונקציה להרצת קוד פייתון
 func runPythonCode(code string, signature string, inputs []interface{}) (string, error) {
