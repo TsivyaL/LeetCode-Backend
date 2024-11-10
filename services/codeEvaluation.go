@@ -1,12 +1,14 @@
 package services
 
 import (
+	"Backend/models"
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 	"strings"
-	"Backend/models"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -26,8 +28,8 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 			return false, err
 		}
 		return strings.Contains(result,question.Answer), nil
-	} else if strings.Contains(answer.Language, "go") {  // השתמש בשדה Language
-		result, err := runGoCode(answer.Code)
+	} else if strings.Contains(answer.Language, "c#") {  // השתמש בשדה Language
+		result, err := runCSharpCode(answer.Code)
 		if err != nil {
 			return false, err
 		}
@@ -63,16 +65,27 @@ func runPythonCode(code string) (string, error) {
 	
 }
 
-
-func runGoCode(code string) (string, error) {
-	// הפעלת קוד Go ישירות במיכל של דוקר בלי יצירת קובץ פיזי
-	cmd := exec.Command("docker", "run", "--rm", "golang:latest", "go", "run", "-e", code)
+func runCSharpCode(code string) (string, error) {
+	// נריץ את קוד ה-C# ישירות במיכל של דוקר
+	cmd := exec.Command("docker", "run", "--rm", "mcr.microsoft.com/dotnet/sdk:7.0", "bash", "-c", fmt.Sprintf("echo '%s' > /tmp/answer.cs && dotnet new console -o /tmp/csharp-app && cd /tmp/csharp-app && dotnet run", code))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Error running Go code: %s", err)
+		log.Printf("Error running C# code: %s", err)
 		return "false", err
 	}
 
-	log.Printf("Go code output: %s", string(output))
-	return string(output) ,nil
+	log.Printf("C# code output: %s", string(output))
+	return string(output), nil
 }
+// func runGoCode(code string) (string, error) {
+// 	// הפעלת קוד Go ישירות במיכל של דוקר בלי יצירת קובץ פיזי
+// 	cmd := exec.Command("docker", "run", "--rm", "golang:latest", "go", "run", "-e", code)
+// 	output, err := cmd.CombinedOutput()
+// 	if err != nil {
+// 		log.Printf("Error running Go code: %s", err)
+// 		return "false", err
+// 	}
+
+// 	log.Printf("Go code output: %s", string(output))
+// 	return string(output) ,nil
+// }

@@ -1,0 +1,14 @@
+# השתמש בתמונה של .NET SDK
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+
+# הגדרת תיקיית עבודה במיכל
+WORKDIR /app
+
+# העתקת כל הקבצים של פרויקט C# למיכל
+COPY . .
+
+# קומפילציה של קוד C# (אם יש קובץ פרוייקט .csproj, תוכל להשתמש בפקודת restore ואז build)
+RUN dotnet build
+
+# פקודת הרצה של הקוד ב-C#
+CMD ["dotnet", "run"]

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:latest
@@ -11,31 +9,35 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
-    restart: always  # אם המיכל יקרוס, יתחיל מחדש
+    restart: always
 
   backend:
     build:
       context: .
-      dockerfile: Dockerfile-go  # בונה את השרת שלך לפי ה-Dockerfile של Go
+      dockerfile: Dockerfile-go
     container_name: backend
     ports:
       - "8080:8080"
     environment:
       - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017
     depends_on:
-      - mongodb  # ההשרת תלוי במונגו DB שיתחיל לפניו
+      - mongodb
     restart: always
-
-  version: '3.8'
-
 
   python:
     image: python:latest
     container_name: python-container
     volumes:
-      - answer-volume:/tmp  # יצירת volume לדוקר עצמו, ושיתוף תיקיית /tmp במיכל
-    command: python3 /tmp/answer.py  # מריץ את הקובץ בתוך המיכל
+      - answer-volume:/tmp
+    command: python3 /tmp/answer.py
     restart: on-failure
-
+  csharp:
+    image: mcr.microsoft.com/dotnet/sdk:7.0
+    container_name: csharp-container
+    volumes:
+      - answer-volume:/tmp
+    command: bash -c "echo '$CODE' > /tmp/answer.cs && dotnet new console -o /tmp/csharp-app && cd /tmp/csharp-app && dotnet run"
+    restart: on-failure
 volumes:
-  answer-volume:  # Volume פנימי שמנוהל על ידי דוקר
+  answer-volume:
+  mongo-data:
