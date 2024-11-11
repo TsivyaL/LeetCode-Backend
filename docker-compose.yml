@@ -1,67 +1,54 @@
-
-
 services:
-  # MongoDB service
   mongodb:
-    image: mongo:latest
+    image: tsivyal/my-mongo-image:latest
     container_name: my_mongo_db
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
     restart: always
     networks:
-      - backend-network  # Connect to the shared network
+      - backend-network
 
-  # Backend service (Go API)
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile-go
+    image: tsivyal/my-backend-image:latest
     container_name: backend
     ports:
       - "8080:8080"
-    env_file:
-      - .env
     environment:
-      - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017  # MongoDB connection URI
-      - PYTHON_HOST=python-container  # Name of the Python container to communicate with
+      - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017
+      - PYTHON_HOST=python-container
     depends_on:
-      - mongodb  # Ensure MongoDB is up before backend starts
-      - python   # Ensure the Python container is ready before backend starts
+      - mongodb
+      - python
     networks:
-      - backend-network  # Connect to the shared network
+      - backend-network
     restart: always
 
-  # Python service (for running Python code dynamically)
   python:
-    image: python:latest
+    image: tsivyal/my-python-image:latest
     container_name: python-container
     volumes:
-      - answer-volume:/tmp  # Shared volume for communication with other containers
-    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running without automatically executing
+      - answer-volume:/tmp
+    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
     restart: on-failure
     networks:
-      - backend-network  # Connect to the shared network
+      - backend-network
 
-  # Node.js service (if needed for other operations, can be removed if not required)
   nodejs:
-    image: node:18  # Custom Node.js image
+    image: tsivyal/my-nodejs-image:latest
     container_name: nodejs-container
     volumes:
-      - answer-volume:/tmp  # Shared volume for communication with other containers
-    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running without automatically executing
+      - answer-volume:/tmp
+    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
     restart: on-failure
     networks:
-      - backend-network  # Connect to the shared network
+      - backend-network
 
 volumes:
   answer-volume:  # Shared volume for communication between containers
   mongo-data:     # Persistent storage for MongoDB data
 
 networks:
-  backend-network:  # Define a shared network for communication between containers
-    driver: bridge
+  backend-network:
+    driver: bridge  # Define a shared network for communication between containers
