@@ -1,16 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"Backend/services"
 	"Backend/routes"
-
+	"Backend/services"
+	//"fmt"
+	"log"
+	"os"
+ 	"github.com/joho/godotenv"
 	"github.com/gin-gonic/gin"
 	//"net/http"
 )
 
 func main() {
+
+    err := godotenv.Load()
+    if err != nil {
+        log.Fatal("Error loading .env file")
+    }
+ 
 	r := gin.Default()
 
 	// חיבור ל-DB
@@ -26,9 +33,12 @@ func main() {
 	routes.SetupAnswerRoutes(r)
 
 	// הרצת השרת
-	if err := r.Run(":8080"); err != nil {
-		log.Fatal("Error starting server: ", err)
-	}
-
-	fmt.Println("Server is running on port 8080")
+	port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"  // ברירת מחדל
+    }
+    if err := r.Run(":" + port); err != nil {
+        log.Fatal("Error starting server: ", err)
+    }
+    log.Println("Server is running on port", port)
 }

@@ -3,8 +3,8 @@ services:
     image: mongo:latest
     container_name: my_mongo_db
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=TsivyaL
-      - MONGO_INITDB_ROOT_PASSWORD=MyName1sTsivya
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
@@ -12,14 +12,12 @@ services:
     restart: always
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile-go
+    image: ${BACKEND_IMAGE}
     container_name: backend
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017
+        - DB_HOST=${MONGO_URI}
     depends_on:
       - mongodb
     restart: always
