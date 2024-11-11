@@ -9,7 +9,7 @@ on:
       - main  # The process can also run on Pull Requests
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,22 +28,23 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # Step 4: Build the Docker image from your Dockerfile
-    - name: Build Docker image
+    # Step 4: Pull Docker images from Docker Hub
+    - name: Pull Docker Images from DockerHub
       run: |
-        docker build -t tsivyal/leetcodebackend:latest .  # Build the image from your code using the Dockerfile
+        docker pull tsivyal/leetcodebackend:latest  # Pull the backend image
+        docker pull tsivyal/leetcodepython:latest  # Pull the python image
+        docker pull tsivyal/leetcodenodejs:latest  # Pull the Node.js image
+        docker pull tsivyal/leetcodemongo:latest  # Pull the MongoDB image
 
-    # Step 5: Push the image to Docker Hub
-    - name: Push Docker image to DockerHub
+    # Step 5: Run the Docker containers
+    - name: Run Docker Containers
       run: |
-        docker push tsivyal/leetcodebackend:latest  # Push the image to Docker Hub
+        docker run -d -p 8080:8080 tsivyal/leetcodebackend:latest  # Run the backend container
+        docker run -d tsivyal/leetcodepython:latest  # Run the python container
+        docker run -d tsivyal/leetcodenodejs:latest  # Run the Node.js container
+        docker run -d tsivyal/leetcodemongo:latest  # Run the MongoDB container
 
-    # Step 6: Run the Docker container
-    - name: Run Docker Container
-      run: |
-        docker run -d -p 8080:8080 tsivyal/leetcodebackend:latest  # Run the container from the image we just created
-
-    # Step 7: Run build or tests (if any)
+    # Step 6: Run build or tests (if any)
     - name: Compile check
       run: |
-        go build ./...  # Run your build or tests after building the image
+        go build ./...  # Run your build or tests after pulling and running the images
