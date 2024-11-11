@@ -39,8 +39,6 @@ jobs:
         docker run -d -p 8080:8080 tsivyal/leetcodebackend:latest  # הרצת הקונטיינר
 
     # שלב 6: הרצת בדיקות (אם יש)
-    - name: Run tests
+    - name: Compile check
       run: |
-        # הרץ את הבדיקות שלך אם יש
-        # לדוגמה:
-        # go test ./...
+        go build ./...
