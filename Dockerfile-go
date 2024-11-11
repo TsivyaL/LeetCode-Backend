@@ -1,0 +1,29 @@
+# שלב 1: שימוש בתמונה של Go
+FROM golang:1.23-alpine as builder
+
+# --- NETFREE CERT INTSALL ---
+    ADD https://netfree.link/dl/unix-ca.sh /home/netfree-unix-ca.sh 
+    RUN cat  /home/netfree-unix-ca.sh | sh
+    ENV NODE_EXTRA_CA_CERTS=/etc/ca-bundle.crt
+    ENV REQUESTS_CA_BUNDLE=/etc/ca-bundle.crt
+    ENV SSL_CERT_FILE=/etc/ca-bundle.crt
+    # --- END NETFREE CERT INTSALL ---
+    
+# הגדרת תיקיית עבודה בתוך הקונטיינר
+WORKDIR /app
+
+# העתקת קבצים לתוך הקונטיינר
+COPY . .
+# העתק את קובץ ה- .env לתוך הקונטיינר
+COPY .env .env
+
+
+# התקנת התלויות
+RUN go mod tidy
+
+# בניית האפליקציה
+RUN go build -o backend .
+
+
+# הרצת ה-backend
+CMD ["go", "run", "main.go"]

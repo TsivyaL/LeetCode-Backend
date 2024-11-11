@@ -71,7 +71,7 @@ print(result)
 `, signature, code, formatInputs(inputs))
 log.Printf(codeWithInput)
 	// נריץ את קוד הפייתון ישירות במיכל של דוקר
-	cmd := exec.Command("docker", "run", "--rm", "python:latest", "python3", "-c", codeWithInput)
+	cmd := exec.Command("docker", "exec", "python-container", "python3", "-c", codeWithInput)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error running Python code: %s", err)
@@ -95,7 +95,7 @@ console.log(solution(%v));
     log.Printf(codeWithInput)
 
     // נריץ את הקוד ישירות במיכל עם Node.js
-    cmd := exec.Command("docker", "run", "--rm", "node:18", "node", "-e", codeWithInput)
+    cmd := exec.Command("docker", "exec", "nodejs-container", "node", "-e", codeWithInput)
 
     output, err := cmd.CombinedOutput()
     if err != nil {

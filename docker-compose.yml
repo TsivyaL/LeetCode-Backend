@@ -1,0 +1,67 @@
+
+
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:latest
+    container_name: my_mongo_db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+    networks:
+      - backend-network  # Connect to the shared network
+
+  # Backend service (Go API)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile-go
+    container_name: backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017  # MongoDB connection URI
+      - PYTHON_HOST=python-container  # Name of the Python container to communicate with
+    depends_on:
+      - mongodb  # Ensure MongoDB is up before backend starts
+      - python   # Ensure the Python container is ready before backend starts
+    networks:
+      - backend-network  # Connect to the shared network
+    restart: always
+
+  # Python service (for running Python code dynamically)
+  python:
+    image: python:latest
+    container_name: python-container
+    volumes:
+      - answer-volume:/tmp  # Shared volume for communication with other containers
+    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running without automatically executing
+    restart: on-failure
+    networks:
+      - backend-network  # Connect to the shared network
+
+  # Node.js service (if needed for other operations, can be removed if not required)
+  nodejs:
+    image: node:18  # Custom Node.js image
+    container_name: nodejs-container
+    volumes:
+      - answer-volume:/tmp  # Shared volume for communication with other containers
+    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running without automatically executing
+    restart: on-failure
+    networks:
+      - backend-network  # Connect to the shared network
+
+volumes:
+  answer-volume:  # Shared volume for communication between containers
+  mongo-data:     # Persistent storage for MongoDB data
+
+networks:
+  backend-network:  # Define a shared network for communication between containers
+    driver: bridge

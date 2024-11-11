@@ -1,17 +1,10 @@
 module Backend
 
-go 1.23.2
+go 1.23
 
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/stretchr/testify v1.9.0
 	go.mongodb.org/mongo-driver v1.17.1
-)
-
-require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 )
 
 require (
