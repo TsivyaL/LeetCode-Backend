@@ -62,7 +62,7 @@ func CreateQuestion(c *gin.Context) {
 		return
 	}
 
-	// אם לא מסרת ID, צור אחד אוטומטית
+	// if Id didnt recived create one new
 	if question.ID.IsZero() {  // אם ה־ObjectId ריק
 		question.ID = primitive.NewObjectID()  // יצירת ID חדש בעזרת ObjectId
 	}
