@@ -3,42 +3,48 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - main  # התהליך יתבצע רק כאשר יהיה push ל-main
+      - main  # The process will run only when there is a push to the main branch
   pull_request:
     branches:
-      - main  # אפשר להריץ גם על Pull Requests
+      - main  # The process can also run on Pull Requests
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # שלב 1: קליטת הקוד מה-repository
+    # Step 1: Checkout the code from the repository
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # שלב 2: הגדרת Docker Buildx
+    # Step 2: Set up Docker Buildx
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
-    # שלב 3: התחברות ל-Docker Hub
+    # Step 3: Login to Docker Hub
     - name: Login to DockerHub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # שלב 4: משיכת התמונה מ-Docker Hub
-    - name: Pull Docker Image from DockerHub
+    # Step 4: Pull Docker images from Docker Hub
+    - name: Pull Docker Images from DockerHub
       run: |
-        docker pull tsivyal/leetcodebackend:latest  # התמונה שלך ב-Docker Hub
+        docker pull tsivyal/my-nodejs-image:latest  # Pull the Node.js image
+        docker pull tsivyal/my-python-image:latest  # Pull the python image
+        docker pull tsivyal/my-backend-image:latest  # Pull the backend image
+        docker pull tsivyal/my-mongo-image:latest  # Pull the MongoDB image
 
-    # שלב 5: הרצת הקונטיינר
-    - name: Run Docker Container
+    # Step 5: Run the Docker containers
+    - name: Run Docker Containers
       run: |
-        docker run -d -p 8080:8080 tsivyal/leetcodebackend:latest  # הרצת הקונטיינר
+        docker run -d -p 8080:8080 tsivyal/my-backend-image:latest  # Run the backend container
+        docker run -d tsivyal/my-python-image:latest  # Run the python container
+        docker run -d tsivyal/my-nodejs-image:latest  # Run the Node.js container
+        docker run -d tsivyal/my-mongo-image:latest  # Run the MongoDB container
 
-    # שלב 6: הרצת בדיקות (אם יש)
+    # Step 6: Run build or tests (if any)
     - name: Compile check
       run: |
-        go build ./...
+        go build ./...  # Run your build or tests after pulling and running the images
