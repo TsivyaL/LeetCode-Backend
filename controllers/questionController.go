@@ -36,6 +36,7 @@ func SetupDB() {
 
 // GetQuestions retrieves all questions from the database
 func GetQuestions(c *gin.Context) {
+	log.Println("in GetQuestions")
 	questions, err := services.FetchAllQuestions()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -46,14 +47,16 @@ func GetQuestions(c *gin.Context) {
 
 // GetQuestion retrieves a single question by ID
 func GetQuestion(c *gin.Context) {
-	id := c.Param("id")
-	question, err := services.FetchQuestionByID(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, question)
+    id := c.Param("id")
+    question, err := services.FetchQuestionByID(id)
+    if err != nil {
+        log.Printf("Error fetching question with ID %s: %v", id, err)
+        c.JSON(http.StatusNotFound, gin.H{"error": "Question not found"})
+        return
+    }
+    c.JSON(http.StatusOK, question)
 }
+
 
 // CreateQuestion creates a new question in the database
 func CreateQuestion(c *gin.Context) {

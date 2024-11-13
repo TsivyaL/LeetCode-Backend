@@ -12,13 +12,15 @@ import (
 )
 
 func main() {
-	log.Println("main")
+	log.Println("main 3")
     err := godotenv.Load()
     if err != nil {
         log.Fatal("Error loading .env file")
     }
  
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
 
 	// חיבור ל-DB
 	// controllers.SetupDB()

@@ -8,6 +8,9 @@ ENV NODE_EXTRA_CA_CERTS=/etc/ca-bundle.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ca-bundle.crt
 ENV SSL_CERT_FILE=/etc/ca-bundle.crt
 # --- END NETFREE CERT INSTALL ---
+RUN apk add --no-cache \
+curl \
+bash
 
 # הגדרת תיקיית עבודה בתוך הקונטיינר
 WORKDIR /app
@@ -17,13 +20,6 @@ COPY . .
 
 # העתק את קובץ ה-.env לתוך הקונטיינר
 COPY .env .env
-
-# התקנת Docker בתוך הקונטיינר
-RUN apk add --no-cache \
-    curl \
-    bash \
-    docker \
-    && curl -fsSL https://get.docker.com | sh
 
 # התקנת התלויות של Go
 RUN go mod tidy

@@ -2,32 +2,36 @@ package services
 
 import (
 	"Backend/models"
+	"bytes"
 	"fmt"
 	"log"
 	"strings"
+
 	"github.com/fsouza/go-dockerclient"
 )
 
 // ExecuteAnswer receives answer code and runs it inside a Docker container
 func ExecuteAnswer(answer models.Answer) (bool, error) {
-	// Check the language type (Python / JS) of the code the user sent
+	// Fetch the question details based on the provided QuestionID
 	question, err := FetchQuestionByID(answer.QuestionID)
 	if err != nil {
 		log.Printf("Error fetching question: %v", err)
 		return false, err
 	}
 
-	// Check if the language is Python
+	// Iterate through the inputs and run the code based on the specified language (Python / JS)
 	for i, input := range question.Inputs {
 		var result string
 		var errRun error
 
+		// Run Python or JavaScript code depending on the language
 		if strings.Contains(answer.Language, "python") {
-			result, errRun = runPythonCode(answer.Code, question.FunctionSignature, input)
+			result, errRun = runCodeInContainer("python", answer.Code, question.FunctionSignature, input)
 		} else if strings.Contains(answer.Language, "js") {
-			result, errRun = runJavaScriptCode(answer.Code, question.FunctionSignature, input)
+			result, errRun = runCodeInContainer("js", answer.Code, question.FunctionSignature, input)
 		}
 
+		// If an error occurred while running the code, log it and return
 		if errRun != nil {
 			log.Printf("Error running code: %v", errRun)
 			return false, errRun
@@ -54,19 +58,29 @@ func checkSingleTest(result string, inputSet []interface{}, expectedOutput inter
 	return true, ""
 }
 
-// Function to run Python code inside Docker
-// Function to run Python code inside Docker
-// Function to run Python code inside Docker
-func runPythonCode(code string, signature string, inputs []interface{}) (string, error) {
-	// Combine the code with the inputs the user sent
-	codeWithInput := fmt.Sprintf(`
+// Unified function to run code inside a Docker container based on language
+func runCodeInContainer(language, code, signature string, inputs []interface{}) (string, error) {
+	var codeWithInput string
+	// Build code with input based on language
+	if language == "python" {
+		codeWithInput = fmt.Sprintf(`
 def solution(%s):
     %s
 result = solution(%v)
 print(result)
 `, signature, code, formatInputs(inputs))
+	} else if language == "js" {
+		codeWithInput = fmt.Sprintf(`
+function solution(%s) {
+    %s;
+}
+console.log(solution(%v));
+`, signature, code, formatInputs(inputs))
+	} else {
+		return "", fmt.Errorf("unsupported language: %s", language)
+	}
 
-	log.Printf("Running Python code: %s", codeWithInput)
+	log.Printf("Running %s code: %s", language, codeWithInput)
 
 	client, err := docker.NewClientFromEnv()
 	if err != nil {
@@ -74,18 +88,31 @@ print(result)
 		return "", err
 	}
 
-	// Create a Docker container with the Python image
+	// Set up container image and command based on the language
+	var image, cmd string
+	if language == "python" {
+		image = "python:3.13-slim"
+		cmd = "python3"
+	} else if language == "js" {
+		image = "node:18-slim"
+		cmd = "node"
+	}
+
+	// Create the container with the appropriate language image
 	container, err := client.CreateContainer(docker.CreateContainerOptions{
-		Name: "python-test-container",
+		Name: "test-container",
 		Config: &docker.Config{
-			Image: "python:3.13-slim",
-			Cmd:   []string{"python3", "-c", codeWithInput},
+			Image: image,
+			Cmd:   []string{cmd, "-e", codeWithInput},
 		},
 	})
 	if err != nil {
 		log.Printf("Error creating container: %v", err)
 		return "", err
 	}
+
+	// Ensure container is removed, even if there's an error later
+	defer client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID, Force: true})
 
 	log.Println("Starting container...")
 
@@ -95,90 +122,39 @@ print(result)
 		return "", err
 	}
 
-	// Attach to container output
+	// Attach to container output and get logs
+	var buffer bytes.Buffer
 	err = client.AttachToContainer(docker.AttachToContainerOptions{
-		Container: container.ID,
-		Stream: true,
-		Stdout: true,
-		Stderr: true,
-		Logs:   true,
+		Container:    container.ID,
+		OutputStream: &buffer,
+		Stream:       true,
+		Stdout:       true,
+		Stderr:       true,
+		Logs:         true,
 	})
 	if err != nil {
 		log.Printf("Error attaching to container: %v", err)
 		return "", err
 	}
 
-	// Read logs from the container
-	logs, err := client.WaitContainer(container.ID)
-if err != nil {
-    log.Printf("Error waiting for container to finish: %v", err)
-    return "", err
-}
-
-log.Printf("Container logs: %s", logs)
- //return logs, nil
-	// Wait for container to finish and capture the exit status
-	_, err = client.WaitContainer(container.ID)
+	// Wait for container to finish executing
+	exitCode, err := client.WaitContainer(container.ID)
 	if err != nil {
 		log.Printf("Error waiting for container to finish: %v", err)
 		return "", err
 	}
 
-	// log.Printf("Final logs from container: %s", logsOutput)
-	defer client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID, Force: true})
-
-	return "", nil
-}
-
-
-// Function to run JavaScript code inside Docker
-func runJavaScriptCode(code string, signature string, inputs []interface{}) (string, error) {
-	// Combine the code with the inputs
-	codeWithInput := fmt.Sprintf(`
-function solution(%s) {
-    %s;
-}
-console.log(solution(%v));
-`, signature, code, formatInputs(inputs))
-
-	log.Printf("Running JavaScript code: %s", codeWithInput)
-
-	client, err := docker.NewClientFromEnv()
-	if err != nil {
-		log.Printf("Error creating Docker client: %v", err)
-		return "", err
+	if exitCode != 0 {
+		log.Printf("Container exited with non-zero code: %d", exitCode)
+		return "", fmt.Errorf("container execution failed with code %d", exitCode)
 	}
 
-	// Create a Docker container with the Node.js image
-	container, err := client.CreateContainer(docker.CreateContainerOptions{
-		Name: "nodejs-test-container",
-		Config: &docker.Config{
-			Image: "tsivyal/my-nodejs-image:latest", // Docker image for Node.js
-			Cmd:   []string{"node", "-e", codeWithInput},
-		},
-	})
-	if err != nil {
-		log.Printf("Error creating container: %v", err)
-		return "", err
-	}
-	defer client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID, Force: true})
+	// Capture logs from buffer
+	logsOutput := buffer.String()
+	log.Printf("Container logs: %s", logsOutput)
 
-	// Start the container
-	err = client.StartContainer(container.ID, nil)
-	if err != nil {
-		log.Printf("Error starting container: %v", err)
-		return "", err
-	}
-
-	// Attach to the container's output
-	logs, err := client.WaitContainer(container.ID)
-	if err != nil {
-		log.Printf("Error waiting for container to finish: %v", err)
-		return "", err
-	}
-
-	log.Printf("JavaScript code output: %s", logs)
-	return fmt.Sprintf("%d", logs), nil
+	// Return the logs output
+	return logsOutput, nil
 }
 
 // Helper function to format inputs

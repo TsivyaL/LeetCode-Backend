@@ -11,15 +11,18 @@ services:
       - backend-network
 
   backend:
-    image: tsivyal/my-backend-image:latest
+    build:
+      context: .
+      dockerfile: Dockerfile-go
     privileged: true  
     volumes:
+      - .:/app/Backend
       - /var/run/docker.sock:/var/run/docker.sock   
     container_name: backend
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017
+      - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@my_mongo_db:27017
       - VARIABLE_NAME=VALUE
       # - PYTHON_HOST=python-container
     depends_on:
