@@ -1,7 +1,10 @@
 FROM node:18
 
+# הגדרת ספריית העבודה
 WORKDIR /usr/src/app
 
+# העתקת כל הקבצים לתוך התמונה
 COPY . .
 
-CMD ["node", "answer.js"]
+# פקודת ההפעלה של המיכל - הפעלה של app.js
+CMD ["node", "app.js"]

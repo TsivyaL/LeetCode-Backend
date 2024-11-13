@@ -12,38 +12,42 @@ services:
 
   backend:
     image: tsivyal/my-backend-image:latest
+    privileged: true  
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   
     container_name: backend
     ports:
       - "8080:8080"
     environment:
       - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@mongodb:27017
-      - PYTHON_HOST=python-container
+      - VARIABLE_NAME=VALUE
+      # - PYTHON_HOST=python-container
     depends_on:
       - mongodb
-      - python
+      # - python
     networks:
       - backend-network
     restart: always
 
-  python:
-    image: tsivyal/my-python-image:latest
-    container_name: python-container
-    volumes:
-      - answer-volume:/tmp
-    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
-    restart: on-failure
-    networks:
-      - backend-network
+  # python:
+  #   image: tsivyal/my-python-image:latest
+  #   container_name: python-container
+  #   volumes:
+  #     - answer-volume:/tmp
+  #   command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
+  #   restart: on-failure
+  #   networks:
+  #     - backend-network
 
-  nodejs:
-    image: tsivyal/my-nodejs-image:latest
-    container_name: nodejs-container
-    volumes:
-      - answer-volume:/tmp
-    command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
-    restart: on-failure
-    networks:
-      - backend-network
+  # nodejs:
+  #   image: tsivyal/my-nodejs-image:latest
+  #   container_name: nodejs-container
+  #   volumes:
+  #     - answer-volume:/tmp
+  #   command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
+  #   restart: on-failure
+  #   networks:
+  #     - backend-network
 
 volumes:
   answer-volume:  # Shared volume for communication between containers

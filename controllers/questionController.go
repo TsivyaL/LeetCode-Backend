@@ -3,22 +3,23 @@ package controllers
 import (
 	"Backend/models"
 	"Backend/services"
-	"context" // ייבוא החבילה חסרה
+	"context"
 	"log"
 	"net/http"
+	//"os"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"         // ייבוא חבילה לחיבור ל-MongoDB
-	"go.mongodb.org/mongo-driver/mongo/options" // ייבוא חבילה לחיבור ל-MongoDB
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var MongoClient *mongo.Client
 
-// SetupDB מחבר את האפליקציה למסד הנתונים
+// SetupDB connects the app to the database
 func SetupDB() {
 	
-    clientOptions := options.Client().ApplyURI("mongodb://TsivyaL:MyName1sTsivya@localhost:27017")
+    clientOptions := options.Client().ApplyURI("mongodb://TsivyaL:MyName1sTsivya@my_mongo_db:27017")
     client, err := mongo.Connect(context.Background(), clientOptions) // תחבר את האפליקציה למסד נתונים
     if err != nil {
         log.Fatal(err)
@@ -62,9 +63,9 @@ func CreateQuestion(c *gin.Context) {
 		return
 	}
 
-	// if Id didnt recived create one new
-	if question.ID.IsZero() {  // אם ה־ObjectId ריק
-		question.ID = primitive.NewObjectID()  // יצירת ID חדש בעזרת ObjectId
+	// if Id didn't receive, create a new one
+	if question.ID.IsZero() {  // If the ObjectId is empty
+		question.ID = primitive.NewObjectID()  // Create a new ID using ObjectId
 	}
 
 	if err := services.AddQuestion(question); err != nil {
@@ -101,6 +102,8 @@ func DeleteQuestion(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Question deleted"})
 }
+
+// DeleteAllQuestions deletes all questions
 func DeleteAllQuestions(c *gin.Context) {
 	if err := services.DeleteAllQuestions(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
