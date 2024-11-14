@@ -16,7 +16,7 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 	question, err := FetchQuestionByID(answer.QuestionID)
 	if err != nil {
 		log.Printf("Error fetching question: %v", err)
-		return false, err
+		return false, fmt.Errorf("error fetching question: %v", err)
 	}
 
 	// Iterate through the inputs and run the code based on the specified language (Python / JS)
@@ -29,6 +29,8 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 			result, errRun = runCodeInContainer("python", answer.Code, question.FunctionSignature, input)
 		} else if strings.Contains(answer.Language, "js") {
 			result, errRun = runCodeInContainer("js", answer.Code, question.FunctionSignature, input)
+		} else {
+			return false, fmt.Errorf("unsupported language: %s", answer.Language)
 		}
 
 		// If an error occurred while running the code, log it and return
@@ -41,7 +43,7 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 		isPassed, message := checkSingleTest(result, input, question.ExpectedOutputs[i])
 		if !isPassed {
 			log.Printf("Test %d failed: %s", i+1, message)
-			return false, nil
+			return false, fmt.Errorf("test %d failed: %s", i+1, message)
 		}
 	}
 
@@ -85,7 +87,7 @@ console.log(solution(%v));
     client, err := docker.NewClientFromEnv()
     if err != nil {
         log.Printf("Error creating Docker client: %v", err)
-        return "", err
+        return "", fmt.Errorf("error creating Docker client: %v", err)
     }
 
     // Set up container image and command based on the language
@@ -109,7 +111,7 @@ console.log(solution(%v));
     })
     if err != nil {
         log.Printf("Error creating container: %v", err)
-        return "", err
+        return "", fmt.Errorf("error creating container: %v", err)
     }
 
     // Ensure container is removed, even if there's an error later
@@ -120,7 +122,7 @@ console.log(solution(%v));
     err = client.StartContainer(container.ID, nil)
     if err != nil {
         log.Printf("Error starting container: %v", err)
-        return "", err
+        return "", fmt.Errorf("error starting container: %v", err)
     }
 
     // Attach to container output and get logs
@@ -135,14 +137,14 @@ console.log(solution(%v));
     })
     if err != nil {
         log.Printf("Error attaching to container: %v", err)
-        return "", err
+        return "", fmt.Errorf("error attaching to container: %v", err)
     }
 
     // Wait for container to finish executing
     exitCode, err := client.WaitContainer(container.ID)
     if err != nil {
         log.Printf("Error waiting for container to finish: %v", err)
-        return "", err
+        return "", fmt.Errorf("error waiting for container to finish: %v", err)
     }
 
     if exitCode != 0 {
@@ -157,7 +159,6 @@ console.log(solution(%v));
     // Return the logs output
     return logsOutput, nil
 }
-
 
 // Helper function to format inputs
 func formatInputs(inputs []interface{}) string {
