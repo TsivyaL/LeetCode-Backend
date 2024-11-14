@@ -60,102 +60,104 @@ func checkSingleTest(result string, inputSet []interface{}, expectedOutput inter
 
 // Unified function to run code inside a Docker container based on language
 func runCodeInContainer(language, code, signature string, inputs []interface{}) (string, error) {
-	var codeWithInput string
-	// Build code with input based on language
-	if language == "python" {
-		codeWithInput = fmt.Sprintf(`
+    var codeWithInput string
+    // Build code with input based on language
+    if language == "python" {
+        codeWithInput = fmt.Sprintf(`
 def solution(%s):
     %s
 result = solution(%v)
 print(result)
 `, signature, code, formatInputs(inputs))
-	} else if language == "js" {
-		codeWithInput = fmt.Sprintf(`
+    } else if language == "js" {
+        codeWithInput = fmt.Sprintf(`
 function solution(%s) {
     %s;
 }
 console.log(solution(%v));
 `, signature, code, formatInputs(inputs))
-	} else {
-		return "", fmt.Errorf("unsupported language: %s", language)
-	}
+    } else {
+        return "", fmt.Errorf("unsupported language: %s", language)
+    }
 
-	log.Printf("Running %s code: %s", language, codeWithInput)
+    log.Printf("Running %s code: %s", language, codeWithInput)
 
-	client, err := docker.NewClientFromEnv()
-	if err != nil {
-		log.Printf("Error creating Docker client: %v", err)
-		return "", err
-	}
+    client, err := docker.NewClientFromEnv()
+    if err != nil {
+        log.Printf("Error creating Docker client: %v", err)
+        return "", err
+    }
 
-	// Set up container image and command based on the language
-	var image, cmd string
-	if language == "python" {
-		image = "python:3.13-slim"
-		cmd = "python3"
-	} else if language == "js" {
-		image = "node:18-slim"
-		cmd = "node"
-	}
+    // Set up container image and command based on the language
+    var image string
+    var cmd []string
+    if language == "python" {
+        image = "python:3.13-slim"
+        cmd = []string{"python3", "-c", codeWithInput}  // שינוי ל- -c
+    } else if language == "js" {
+        image = "node:18-slim"
+        cmd = []string{"node", "-e", codeWithInput}     // שמירה על -e עבור JavaScript
+    }
 
-	// Create the container with the appropriate language image
-	container, err := client.CreateContainer(docker.CreateContainerOptions{
-		Name: "test-container",
-		Config: &docker.Config{
-			Image: image,
-			Cmd:   []string{cmd, "-e", codeWithInput},
-		},
-	})
-	if err != nil {
-		log.Printf("Error creating container: %v", err)
-		return "", err
-	}
+    // Create the container with the appropriate language image
+    container, err := client.CreateContainer(docker.CreateContainerOptions{
+        Name: "test-container",
+        Config: &docker.Config{
+            Image: image,
+            Cmd:   cmd,
+        },
+    })
+    if err != nil {
+        log.Printf("Error creating container: %v", err)
+        return "", err
+    }
 
-	// Ensure container is removed, even if there's an error later
-	defer client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID, Force: true})
+    // Ensure container is removed, even if there's an error later
+    defer client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID, Force: true})
 
-	log.Println("Starting container...")
+    log.Println("Starting container...")
 
-	err = client.StartContainer(container.ID, nil)
-	if err != nil {
-		log.Printf("Error starting container: %v", err)
-		return "", err
-	}
+    err = client.StartContainer(container.ID, nil)
+    if err != nil {
+        log.Printf("Error starting container: %v", err)
+        return "", err
+    }
 
-	// Attach to container output and get logs
-	var buffer bytes.Buffer
-	err = client.AttachToContainer(docker.AttachToContainerOptions{
-		Container:    container.ID,
-		OutputStream: &buffer,
-		Stream:       true,
-		Stdout:       true,
-		Stderr:       true,
-		Logs:         true,
-	})
-	if err != nil {
-		log.Printf("Error attaching to container: %v", err)
-		return "", err
-	}
+    // Attach to container output and get logs
+    var buffer bytes.Buffer
+    err = client.AttachToContainer(docker.AttachToContainerOptions{
+        Container:    container.ID,
+        OutputStream: &buffer,
+        Stream:       true,
+        Stdout:       true,
+        Stderr:       true,
+        Logs:         true,
+    })
+    if err != nil {
+        log.Printf("Error attaching to container: %v", err)
+        return "", err
+    }
 
-	// Wait for container to finish executing
-	exitCode, err := client.WaitContainer(container.ID)
-	if err != nil {
-		log.Printf("Error waiting for container to finish: %v", err)
-		return "", err
-	}
+    // Wait for container to finish executing
+    exitCode, err := client.WaitContainer(container.ID)
+    if err != nil {
+        log.Printf("Error waiting for container to finish: %v", err)
+        return "", err
+    }
 
-	if exitCode != 0 {
-		log.Printf("Container exited with non-zero code: %d", exitCode)
-		return "", fmt.Errorf("container execution failed with code %d", exitCode)
-	}
+    if exitCode != 0 {
+        log.Printf("Container exited with non-zero code: %d", exitCode)
+        return "", fmt.Errorf("container execution failed with code %d", exitCode)
+    }
 
-	// Capture logs from buffer
-	logsOutput := buffer.String()
-	log.Printf("Container logs: %s", logsOutput)
+    // Capture logs from buffer
+    logsOutput := buffer.String()
+    log.Printf("Container logs: %s", logsOutput)
 
-	// Return the logs output
-	return logsOutput, nil
+    // Return the logs output
+    return logsOutput, nil
 }
+
 
 // Helper function to format inputs
 func formatInputs(inputs []interface{}) string {
