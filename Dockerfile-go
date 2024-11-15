@@ -1,31 +1,33 @@
-# שימוש בתמונה של Go כבסיס
+# Use Go image as the base for the build stage
 FROM golang:1.23-alpine as builder
 
-# --- NETFREE CERT INSTALL ---
+# --- NETFREE CERTIFICATE INSTALLATION ---
 ADD https://netfree.link/dl/unix-ca.sh /home/netfree-unix-ca.sh 
 RUN cat /home/netfree-unix-ca.sh | sh
 ENV NODE_EXTRA_CA_CERTS=/etc/ca-bundle.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ca-bundle.crt
 ENV SSL_CERT_FILE=/etc/ca-bundle.crt
-# --- END NETFREE CERT INSTALL ---
+# --- END OF NETFREE CERTIFICATE INSTALLATION ---
+
+# Install additional necessary packages
 RUN apk add --no-cache \
 curl \
 bash
 
-# הגדרת תיקיית עבודה בתוך הקונטיינר
+# Set the working directory inside the container
 WORKDIR /app
 
-# העתקת קבצים לתוך הקונטיינר
+# Copy all project files into the container
 COPY . .
 
-# העתק את קובץ ה-.env לתוך הקונטיינר
+# Copy the .env file into the container
 COPY .env .env
 
-# התקנת התלויות של Go
+# Install Go dependencies
 RUN go mod tidy
 
-# בניית האפליקציה
+# Build the Go application
 RUN go build -o backend .
 
-# הרצת ה-backend
+# Run the backend application
 CMD ["go", "run", "main.go"]

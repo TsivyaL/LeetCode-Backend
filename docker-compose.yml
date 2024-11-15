@@ -11,46 +11,34 @@ services:
       - backend-network
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile-go
-    privileged: true  
-    volumes:
-      - .:/app/Backend
-      - /var/run/docker.sock:/var/run/docker.sock   
+    image: tsivyal/my-backend-image:latest  # Use prebuilt backend image
     container_name: backend
     ports:
       - "8080:8080"
+    volumes:
+      # - .:/app/Backend
+      - /var/run/docker.sock:/var/run/docker.sock   # Mount the Docker socket
     environment:
       - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@my_mongo_db:27017
       - VARIABLE_NAME=VALUE
-      # - PYTHON_HOST=python-container
     depends_on:
       - mongodb
-      # - python
     networks:
       - backend-network
     restart: always
 
-  # python:
-  #   image: tsivyal/my-python-image:latest
-  #   container_name: python-container
-  #   volumes:
-  #     - answer-volume:/tmp
-  #   command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
-  #   restart: on-failure
-  #   networks:
-  #     - backend-network
-
-  # nodejs:
-  #   image: tsivyal/my-nodejs-image:latest
-  #   container_name: nodejs-container
-  #   volumes:
-  #     - answer-volume:/tmp
-  #   command: ["sh", "-c", "while :; do sleep 1000; done"]  # Keeps the container running
-  #   restart: on-failure
-  #   networks:
-  #     - backend-network
+  frontend:
+    image: tsivyal/nuxt-frontend:latest
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:8080
+    depends_on:
+      - backend
+    networks:
+      - backend-network
+    restart: always
 
 volumes:
   answer-volume:  # Shared volume for communication between containers

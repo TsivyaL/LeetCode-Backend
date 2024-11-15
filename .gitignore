@@ -1,0 +1,50 @@
+
+
+# Ignore build output and binaries
+/app/backend
+backend
+
+# Ignore Go dependency cache files
+/go/pkg/
+/go/bin/
+/go/src/
+
+# Ignore Docker-related files
+docker-compose.override.yml
+
+# Ignore log files
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE-specific configuration files
+.idea/
+.vscode/
+
+# Ignore node_modules for any frontend code present
+node_modules/
+
+# Ignore temporary files and directories created during development
+*.tmp
+*.swp
+*.bak
+*.old
+
+# Ignore files created by Go tools
+*.out
+*.test
+*.sum
+
+# Ignore any backup files
+*~
+
+# Ignore the compiled binary file for the Go backend
+backend.exe
+
+# Ignore archive and compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
