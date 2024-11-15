@@ -66,18 +66,15 @@ func runCodeInContainer(language, code, signature string, inputs []interface{}) 
     // Build code with input based on language
     if language == "python" {
         codeWithInput = fmt.Sprintf(`
-def solution(%s):
-    %s
+%s
 result = solution(%v)
 print(result)
-`, signature, code, formatInputs(inputs))
+`, code, formatInputs(inputs))
     } else if language == "js" {
         codeWithInput = fmt.Sprintf(`
-function solution(%s) {
-    %s;
-}
+%s;
 console.log(solution(%v));
-`, signature, code, formatInputs(inputs))
+`, code, formatInputs(inputs))
     } else {
         return "", fmt.Errorf("unsupported language: %s", language)
     }
