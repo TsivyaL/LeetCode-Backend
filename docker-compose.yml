@@ -11,16 +11,18 @@ services:
       - backend-network
 
   backend:
-    image: tsivyal/my-backend-image:latest  # Use prebuilt backend image
+    build:
+      context: ./  # נתיב שבו נמצא ה-Dockerfile של הבקאנד
+      dockerfile: Dockerfile-go  # אם יש לך תיקיית Docker ו-Dockerfile בתוכה
     container_name: backend
     ports:
       - "8080:8080"
     volumes:
-      # - .:/app/Backend
       - /var/run/docker.sock:/var/run/docker.sock   # Mount the Docker socket
     environment:
       - DB_HOST=mongodb://TsivyaL:MyName1sTsivya@my_mongo_db:27017
       - VARIABLE_NAME=VALUE
+      
     depends_on:
       - mongodb
     networks:
