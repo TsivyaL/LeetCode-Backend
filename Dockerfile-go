@@ -9,10 +9,14 @@ ENV REQUESTS_CA_BUNDLE=/etc/ca-bundle.crt
 ENV SSL_CERT_FILE=/etc/ca-bundle.crt
 # --- END OF NETFREE CERTIFICATE INSTALLATION ---
 
-# Install additional necessary packages
+# Install necessary packages, including curl, bash, ca-certificates and kubectl
 RUN apk add --no-cache \
-curl \
-bash
+    curl \
+    bash \
+    ca-certificates && \
+    curl -LO "https://storage.googleapis.com/kubernetes-release/release/v1.27.3/bin/linux/amd64/kubectl" && \
+    chmod +x ./kubectl && \
+    mv ./kubectl /usr/local/bin/kubectl
 
 # Set the working directory inside the container
 WORKDIR /app
