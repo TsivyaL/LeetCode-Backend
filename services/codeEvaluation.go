@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -76,32 +78,31 @@ func validateSyntax(language, code string) error {
 	var cmd *exec.Cmd
 	log.Printf("Code received: %s", code)
 
-	// הכנת הפקודה בהתאם לשפת הקוד
+	// Prepare the command according to the programming language
 	if language == "python" {
-		// הפעלת python עם דגל -c שמבצע את הקוד שמועבר לו
-		cmd = exec.Command("python3", "-c", code) // שים לב, python3 במקום python
+		// Run python with the -c flag to execute the provided code
+		cmd = exec.Command("python3", "-c", code) // Note: use python3 instead of python
 	} else if language == "js" {
-		// הפעלת node עם דגל -e שמבצע את הקוד שמועבר לו
+		// Run node with the -e flag to execute the provided code
 		cmd = exec.Command("node", "-e", code)
 	} else {
 		return fmt.Errorf("unsupported language: %s", language)
 	}
 
-	// הכנת משתנה לתפיסת שגיאות stderr
+	// Prepare a variable to capture stderr errors
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
-	// הפעלת הפקודה ורישום פלט השגיאה אם יש
+	// Run the command and log any stderr output
 	if err := cmd.Run(); err != nil {
 		log.Printf("Command failed: %v", err)
-		log.Printf("stderr: %s", stderr.String())  // הדפסת שגיאות שקשורות לפלט stderr
+		log.Printf("stderr: %s", stderr.String())  // Print errors related to stderr output
 		return fmt.Errorf("syntax validation failed: %s", stderr.String())
 	}
 
 	log.Printf("Syntax validation passed for %s code.", language)
 	return nil
 }
-
 
 // checkSingleTest compares the output with the expected result
 func checkSingleTest(result string, inputSet []interface{}, expectedOutput interface{}) (bool, string) {
@@ -162,11 +163,27 @@ func createKubernetesJobSpec(language, code string) *batchv1.Job {
 
 	// Adjust the command based on the language
 	if language == "python" {
-		// Split the code into lines, if necessary
-		lines := strings.Split(code, "\n")
-		// python -c expects code as a string, so pass the whole code as args
-		args = append(args, strings.Join(lines, " "))  // Join lines into one string for the argument
-		command = []string{"python", "-c"}
+		// Create a temporary Python file
+		// Create a temporary Python file with a full path
+tempFilePath := "/tmp/python_code_" + time.Now().Format("20060102150405") + ".py"
+tempFile, err := ioutil.TempFile("/tmp", "python_code_*.py")  // Using /tmp explicitly
+if err != nil {
+    log.Printf("Error creating temporary file for python code: %v", err)
+    return nil
+}
+defer os.Remove(tempFile.Name())  // Remove the file when done
+
+// Write to the file
+_, err = tempFile.WriteString(code)
+if err != nil {
+    log.Printf("Error writing python code to temporary file: %v", err)
+    return nil
+}
+
+// Add the full path of the temporary file as an argument for Python
+args = append(args, tempFilePath)  // Using the full path of the temp file
+command = []string{"python", tempFilePath}  // Adjust command to use the full file path
+
 	} else if language == "js" {
 		// For JavaScript, we need to send the code as a single argument
 		args = append(args, code)
