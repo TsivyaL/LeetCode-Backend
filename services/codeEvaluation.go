@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -23,6 +24,12 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 	if err != nil {
 		log.Printf("Error fetching question: %v", err)
 		return false, fmt.Errorf("error fetching question: %v", err)
+	}
+
+	// Perform syntax validation before proceeding
+	if err := validateSyntax(answer.Language, answer.Code); err != nil {
+		log.Printf("Syntax error: %v", err)
+		return false, fmt.Errorf("syntax error: %v", err)
 	}
 
 	// Create Kubernetes client from kubeconfig
@@ -64,7 +71,39 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 	return true, nil
 }
 
-// Function to compare the output with the expected result
+// validateSyntax checks if the provided code has syntax errors
+func validateSyntax(language, code string) error {
+	var cmd *exec.Cmd
+	log.Printf("Code received: %s", code)
+
+	// הכנת הפקודה בהתאם לשפת הקוד
+	if language == "python" {
+		// הפעלת python עם דגל -c שמבצע את הקוד שמועבר לו
+		cmd = exec.Command("python3", "-c", code) // שים לב, python3 במקום python
+	} else if language == "js" {
+		// הפעלת node עם דגל -e שמבצע את הקוד שמועבר לו
+		cmd = exec.Command("node", "-e", code)
+	} else {
+		return fmt.Errorf("unsupported language: %s", language)
+	}
+
+	// הכנת משתנה לתפיסת שגיאות stderr
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	// הפעלת הפקודה ורישום פלט השגיאה אם יש
+	if err := cmd.Run(); err != nil {
+		log.Printf("Command failed: %v", err)
+		log.Printf("stderr: %s", stderr.String())  // הדפסת שגיאות שקשורות לפלט stderr
+		return fmt.Errorf("syntax validation failed: %s", stderr.String())
+	}
+
+	log.Printf("Syntax validation passed for %s code.", language)
+	return nil
+}
+
+
+// checkSingleTest compares the output with the expected result
 func checkSingleTest(result string, inputSet []interface{}, expectedOutput interface{}) (bool, string) {
 	// Ensure the result matches the expected output
 	if !strings.Contains(result, fmt.Sprintf("%v", expectedOutput)) {
@@ -73,10 +112,9 @@ func checkSingleTest(result string, inputSet []interface{}, expectedOutput inter
 	return true, ""
 }
 
-// Unified function to run code inside a Kubernetes Pod (Job) based on language
+// runCodeInKubernetes executes code in a Kubernetes Job
 func runCodeInKubernetes(clientset *kubernetes.Clientset, language, code, signature string, inputs []interface{}) (string, error) {
 	var codeWithInput string
-	// Build code with input based on language
 	if language == "python" {
 		codeWithInput = fmt.Sprintf(
 			`%s
@@ -98,7 +136,7 @@ console.log(solution(%v));
 	job := createKubernetesJobSpec(language, codeWithInput)
 
 	// Create the Job in Kubernetes
-	jobClient := clientset.BatchV1().Jobs("default") // Default namespace
+	jobClient := clientset.BatchV1().Jobs("default")
 	job, err := jobClient.Create(context.TODO(), job, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf("Error creating Kubernetes Job: %v", err)
@@ -114,6 +152,8 @@ console.log(solution(%v));
 
 	return logs, nil
 }
+
+
 
 // Create the Job specification
 func createKubernetesJobSpec(language, code string) *batchv1.Job {
@@ -150,6 +190,7 @@ func createKubernetesJobSpec(language, code string) *batchv1.Job {
 							Image:   getImageForLanguage(language),
 							Command: command,  // The main command to run (python or node)
 							Args:    args,      // The code as arguments for the command
+							ImagePullPolicy: corev1.PullIfNotPresent,
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever, // Prevent container from restarting on failure

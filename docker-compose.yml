@@ -1,14 +1,14 @@
 services:
-  # mongodb:
-  #   image: tsivyal/my-mongo-image:latest
-  #   container_name: my_mongo_db
-  #   ports:
-  #     - "27017:27017"
-  #   volumes:
-  #     - mongo-data:/data/db
-  #   restart: always
-  #   networks:
-  #     - backend-network
+  mongodb:
+    image: tsivyal/my-mongo-image:latest
+    container_name: my_mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+    networks:
+      - backend-network
 
   backend:
     build:
@@ -22,12 +22,13 @@ services:
         # Mount the Docker socket
       - C:/Users/OWNER/.kube:/root/.kube:ro
     environment:
-      - MONGO_URI=${MONGO_URI}
+      - DB_HOST=${MONGO_URI}
+      # - MONGO_URI=${MONGO_URI}
       - VARIABLE_NAME=VALUE
       - KUBECONFIG=/root/.kube/config
       
-    # depends_on:
-    #   - mongodb
+    depends_on:
+      - mongodb
     networks:
       - backend-network
     restart: always

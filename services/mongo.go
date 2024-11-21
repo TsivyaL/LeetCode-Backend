@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"os/exec"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -29,6 +30,11 @@ func SetupDB() error {
             break
         }
         log.Printf("Failed to connect to MongoDB: %v. Retrying...", err)
+        err = startMongoContainer()
+        if err != nil {
+            log.Printf("Failed to start MongoDB container: %v", err)
+            return err
+        }
         time.Sleep(5 * time.Second)
     }
     if err != nil {
@@ -41,5 +47,15 @@ func SetupDB() error {
     MongoClient = client
     QuestionsCollection = client.Database("test").Collection("questions")
     log.Println("Connected to MongoDB!")
+    return nil
+
+}
+func startMongoContainer() error {
+    cmd := exec.Command("docker", "start", "my_mongo_db")
+    err := cmd.Run()
+    if err != nil {
+        return err
+    }
+    log.Println("MongoDB container started successfully")
     return nil
 }
