@@ -5,9 +5,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	// "io/ioutil"
 	"log"
-	"os"
+	// "os"
 	"os/exec"
 	"strings"
 	"time"
@@ -106,10 +106,18 @@ func validateSyntax(language, code string) error {
 
 // checkSingleTest compares the output with the expected result
 func checkSingleTest(result string, inputSet []interface{}, expectedOutput interface{}) (bool, string) {
-	// Ensure the result matches the expected output
-	if !strings.Contains(result, fmt.Sprintf("%v", expectedOutput)) {
-		return false, fmt.Sprintf("Input set: %v\nExpected output: %v\nReceived output: %v", inputSet, expectedOutput, result)
+	var resultValue string
+	if strings.Contains(result, "\n") {
+		resultValue = strings.TrimSpace(result) // מסיר רווחים בסוף הפלט
+	} else {
+		resultValue = result
 	}
+
+	expectedValue := fmt.Sprintf("%v", expectedOutput)
+	if resultValue != expectedValue {
+		return false, fmt.Sprintf("Input set: %v\nExpected output: %v\nReceived output: %v", inputSet, expectedValue, resultValue)
+	}
+
 	return true, ""
 }
 
@@ -156,36 +164,25 @@ console.log(solution(%v));
 
 
 
-// Create the Job specification
+
+// createKubernetesJobSpec creates the Job spec, adding checks for temporary file creation and errors.
 func createKubernetesJobSpec(language, code string) *batchv1.Job {
+	
 	var command []string
 	var args []string
 
-	// Adjust the command based on the language
 	if language == "python" {
 		// Create a temporary Python file
-		// Create a temporary Python file with a full path
-tempFilePath := "/tmp/python_code_" + time.Now().Format("20060102150405") + ".py"
-tempFile, err := ioutil.TempFile("/tmp", "python_code_*.py")  // Using /tmp explicitly
-if err != nil {
-    log.Printf("Error creating temporary file for python code: %v", err)
-    return nil
-}
-defer os.Remove(tempFile.Name())  // Remove the file when done
+		// tempFilePath := "/tmp/python_code_" + time.Now().Format("20060102150405") + ".py"
+		// err := ioutil.WriteFile(tempFilePath, []byte(code), 0644)
+		// if err != nil {
+		// 	log.Printf("Error creating temporary file for Python code: %v", err)
+		// 	return nil
+		// }
+		// defer os.Remove(tempFilePath) // Ensure cleanup of the temporary file
 
-// Write to the file
-_, err = tempFile.WriteString(code)
-if err != nil {
-    log.Printf("Error writing python code to temporary file: %v", err)
-    return nil
-}
-
-// Add the full path of the temporary file as an argument for Python
-args = append(args, tempFilePath)  // Using the full path of the temp file
-command = []string{"python", tempFilePath}  // Adjust command to use the full file path
-
+		command = []string{"python3","-c", code}
 	} else if language == "js" {
-		// For JavaScript, we need to send the code as a single argument
 		args = append(args, code)
 		command = []string{"node", "-e"}
 	} else {
@@ -193,7 +190,6 @@ command = []string{"python", tempFilePath}  // Adjust command to use the full fi
 		return nil
 	}
 
-	// Define the Kubernetes Job spec
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("code-execution-%s", time.Now().Format("20060102150405")),
@@ -203,14 +199,14 @@ command = []string{"python", tempFilePath}  // Adjust command to use the full fi
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "code-executor",
-							Image:   getImageForLanguage(language),
-							Command: command,  // The main command to run (python or node)
-							Args:    args,      // The code as arguments for the command
+							Name:            "code-executor",
+							Image:           getImageForLanguage(language),
+							Command:         command,
+							Args:            args,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 						},
 					},
-					RestartPolicy: corev1.RestartPolicyNever, // Prevent container from restarting on failure
+					RestartPolicy: corev1.RestartPolicyNever, // Prevent retries on failure
 				},
 			},
 		},
@@ -230,9 +226,8 @@ func getImageForLanguage(language string) string {
 
 // Wait for the Kubernetes Job to finish and retrieve the logs
 func waitForJobAndGetLogs(clientset *kubernetes.Clientset, job *batchv1.Job) (string, error) {
-	// Wait for the Job to complete
 	log.Printf("Waiting for job to complete...")
-	time.Sleep(10 * time.Second) // wait for pod to start and finish execution
+	time.Sleep(10 * time.Second) // Wait for the pod to finish execution
 
 	// Use the job's label selector to find the corresponding pod
 	labelSelector := fmt.Sprintf("job-name=%s", job.Name)
@@ -246,13 +241,24 @@ func waitForJobAndGetLogs(clientset *kubernetes.Clientset, job *batchv1.Job) (st
 	}
 
 	if len(podList.Items) == 0 {
-		return "", fmt.Errorf("no pods found for job %s", job.Name)
+		errMsg := fmt.Sprintf("no pods found for job %s", job.Name)
+		log.Printf(errMsg)
+		return "", fmt.Errorf(errMsg)
 	}
 
 	// Assuming the first pod is the one we're interested in
 	podName := podList.Items[0].Name
+	log.Printf("Found pod for job %s: %s", job.Name, podName)
 
-	// Get logs from the pod using the correct PodLogOptions
+	// Check pod status before fetching logs
+	pod := podList.Items[0]
+	if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodRunning {
+		errMsg := fmt.Sprintf("pod %s did not complete successfully, status: %s", podName, pod.Status.Phase)
+		log.Printf(errMsg)
+		return "", fmt.Errorf(errMsg)
+	}
+
+	// Get logs from the pod
 	podLogs, err := podsClient.GetLogs(podName, &corev1.PodLogOptions{}).Stream(context.TODO())
 	if err != nil {
 		log.Printf("Error getting pod logs: %v", err)
@@ -269,6 +275,7 @@ func waitForJobAndGetLogs(clientset *kubernetes.Clientset, job *batchv1.Job) (st
 
 	return buffer.String(), nil
 }
+
 
 // Helper function to format inputs
 func formatInputs(inputs []interface{}) string {

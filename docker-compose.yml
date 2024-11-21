@@ -11,16 +11,14 @@ services:
       - backend-network
 
   backend:
-    build:
-      context: ./ 
-      dockerfile: Dockerfile-go  
+    image: tsivyal/my-backend-image:latest
     container_name: backend
     ports:
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock 
         # Mount the Docker socket
-      - C:/Users/OWNER/.kube:/root/.kube:ro
+      - ${KUBE_CONFIG_PATH}:/root/.kube:ro
     environment:
       - DB_HOST=${MONGO_URI}
       # - MONGO_URI=${MONGO_URI}
@@ -33,18 +31,18 @@ services:
       - backend-network
     restart: always
 
-  # frontend:
-  #   image: tsivyal/nuxt-frontend:latest
-  #   container_name: frontend
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - BACKEND_URL=http://backend:8080
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - backend-network
-  #   restart: always
+  frontend:
+    image: tsivyal/nuxt-frontend:latest
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:8080
+    depends_on:
+      - backend
+    networks:
+      - backend-network
+    restart: always
 
 volumes:
   answer-volume:  # Shared volume for communication between containers
