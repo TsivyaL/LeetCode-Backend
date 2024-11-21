@@ -255,10 +255,27 @@ func waitForJobAndGetLogs(clientset *kubernetes.Clientset, job *batchv1.Job) (st
 	if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodRunning {
 		errMsg := fmt.Sprintf("pod %s did not complete successfully, status: %s", podName, pod.Status.Phase)
 		log.Printf(errMsg)
-		return "", fmt.Errorf(errMsg)
+		// Fetch logs even if the pod failed to complete successfully to see the error details
+		logs, logErr := getPodLogs(clientset, podName)
+		if logErr != nil {
+			log.Printf("Error retrieving pod logs: %v", logErr)
+		}
+		return "", fmt.Errorf("%s\nLogs:\n%s", errMsg, logs)
 	}
 
 	// Get logs from the pod
+	logs, err := getPodLogs(clientset, podName)
+	if err != nil {
+		log.Printf("Error getting pod logs: %v", err)
+		return "", fmt.Errorf("error getting pod logs: %v", err)
+	}
+
+	return logs, nil
+}
+
+// Helper function to fetch logs from a pod
+func getPodLogs(clientset *kubernetes.Clientset, podName string) (string, error) {
+	podsClient := clientset.CoreV1().Pods("default")
 	podLogs, err := podsClient.GetLogs(podName, &corev1.PodLogOptions{}).Stream(context.TODO())
 	if err != nil {
 		log.Printf("Error getting pod logs: %v", err)
@@ -280,10 +297,19 @@ func waitForJobAndGetLogs(clientset *kubernetes.Clientset, job *batchv1.Job) (st
 // Helper function to format inputs
 func formatInputs(inputs []interface{}) string {
 	var formattedInputs []string
+
+	// מעבר על כל האיברים במערך
 	for _, input := range inputs {
-		// Convert each input to a string value (so it can be used in JS)
-		formattedInputs = append(formattedInputs, fmt.Sprintf("%v", input))
+		switch v := input.(type) {
+		case string:
+			formattedInputs = append(formattedInputs, fmt.Sprintf("\"%s\"", v))
+		case []interface{}:
+			formattedInputs = append(formattedInputs, formatInputs(v))
+		default:
+			formattedInputs = append(formattedInputs, fmt.Sprintf("%v", v))
+		}
 	}
+
 	return strings.Join(formattedInputs, ", ")
 }
 
