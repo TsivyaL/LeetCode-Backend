@@ -65,7 +65,7 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 		if errRun != nil {
 			log.Printf("Error running code: %v", errRun)
 			return false, errRun
-			
+
 		}
 
 		// Check if the result matches the expected output for each input
@@ -262,71 +262,90 @@ func getImageForLanguage(language string) string {
 
 // Wait for the Kubernetes Job to finish and retrieve the logs
 func waitForJobAndGetLogs(clientset *kubernetes.Clientset, job *batchv1.Job) (string, error) {
-	log.Printf("Waiting for job to complete...")
-	time.Sleep(10 * time.Second) // Wait for the pod to finish execution
+	log.Printf("Waiting for job %s to complete...", job.Name)
 
-	// Use the job's label selector to find the corresponding pod
-	labelSelector := fmt.Sprintf("job-name=%s", job.Name)
-	podsClient := clientset.CoreV1().Pods("default")
-	podList, err := podsClient.List(context.TODO(), metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		log.Printf("Error getting pods: %v", err)
-		return "", fmt.Errorf("error getting pods: %v", err)
-	}
+	// Define maximum timeout for waiting
+	timeout := time.Minute * 5
+	interval := time.Second * 5
+	deadline := time.Now().Add(timeout)
 
-	if len(podList.Items) == 0 {
-		errMsg := fmt.Sprintf("no pods found for job %s", job.Name)
-		log.Printf(errMsg)
-		return "", fmt.Errorf(errMsg)
-	}
-
-	// Assuming the first pod is the one we're interested in
-	podName := podList.Items[0].Name
-	log.Printf("Found pod for job %s: %s", job.Name, podName)
-
-	// Check pod status before fetching logs
-	pod := podList.Items[0]
-	if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodRunning {
-		errMsg := fmt.Sprintf("pod %s did not complete successfully, status: %s", podName, pod.Status.Phase)
-		log.Printf(errMsg)
-		// Fetch logs even if the pod failed to complete successfully to see the error details
-		logs, logErr := getPodLogs(clientset, podName)
-		if logErr != nil {
-			log.Printf("Error retrieving pod logs: %v", logErr)
+	for time.Now().Before(deadline) {
+		// Find the pod associated with the job
+		labelSelector := fmt.Sprintf("job-name=%s", job.Name)
+		podsClient := clientset.CoreV1().Pods("default")
+		podList, err := podsClient.List(context.TODO(), metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			log.Printf("Error getting pods: %v", err)
+			return "", fmt.Errorf("error getting pods: %v", err)
 		}
-		return "", fmt.Errorf("%s\nLogs:\n%s", errMsg, logs)
+
+		// If no pods are found, retry after the interval
+		if len(podList.Items) == 0 {
+			log.Printf("No pods found for job %s, retrying...", job.Name)
+			time.Sleep(interval)
+			continue
+		}
+
+		// Assume the first pod in the list is the one we are interested in
+		pod := podList.Items[0]
+		podName := pod.Name
+		log.Printf("Found pod for job %s: %s", job.Name, podName)
+
+		// Check if the pod has completed successfully
+		if pod.Status.Phase == corev1.PodSucceeded {
+			log.Printf("Pod %s completed successfully!", podName)
+			// Retrieve and return pod logs
+			return getPodLogs(clientset, podName)
+		} else if pod.Status.Phase == corev1.PodFailed {
+			log.Printf("Pod %s failed with status: %s", podName, pod.Status.Phase)
+			// Retrieve logs even if the pod failed to help debug issues
+			logs, logErr := getPodLogs(clientset, podName)
+			if logErr != nil {
+				log.Printf("Error retrieving pod logs: %v", logErr)
+			}
+			return "", fmt.Errorf("Logs:\n%s", logs)
+		}
+
+		// Log the current pod status and retry after the interval
+		log.Printf("Pod %s status: %s, retrying in %v...", podName, pod.Status.Phase, interval)
+		time.Sleep(interval)
 	}
 
-	// Get logs from the pod
-	logs, err := getPodLogs(clientset, podName)
-	if err != nil {
-		log.Printf("Error getting pod logs: %v", err)
-		return "", fmt.Errorf("error getting pod logs: %v", err)
-	}
-
-	return logs, nil
+	// If the timeout is reached, return an error
+	errMsg := fmt.Sprintf("Timeout waiting for job %s to complete", job.Name)
+	log.Printf(errMsg)
+	return "", fmt.Errorf(errMsg)
 }
 
+
 // Helper function to fetch logs from a pod
+// Helper function to fetch logs from a pod and return only the first few lines
 func getPodLogs(clientset *kubernetes.Clientset, podName string) (string, error) {
-	podsClient := clientset.CoreV1().Pods("default")
-	podLogs, err := podsClient.GetLogs(podName, &corev1.PodLogOptions{}).Stream(context.TODO())
+	podLogOpts := corev1.PodLogOptions{}
+	req := clientset.CoreV1().Pods("default").GetLogs(podName, &podLogOpts)
+	logStream, err := req.Stream(context.TODO())
 	if err != nil {
-		log.Printf("Error getting pod logs: %v", err)
-		return "", fmt.Errorf("error getting pod logs: %v", err)
+		return "", fmt.Errorf("error opening log stream: %v", err)
 	}
-	defer podLogs.Close()
+	defer logStream.Close()
 
-	var buffer bytes.Buffer
-	_, err = buffer.ReadFrom(podLogs)
+	var logsBuffer bytes.Buffer
+	_, err = logsBuffer.ReadFrom(logStream)
 	if err != nil {
-		log.Printf("Error reading logs from pod: %v", err)
-		return "", fmt.Errorf("error reading logs from pod: %v", err)
+		return "", fmt.Errorf("error reading logs: %v", err)
 	}
 
-	return buffer.String(), nil
+	logs := logsBuffer.String()
+
+	// Split logs into lines and take the first 4 lines only
+	lines := strings.Split(logs, "\n")
+	if len(lines) > 4 {
+		lines = lines[:4]
+	}
+
+	return strings.Join(lines, "\n"), nil
 }
 
 
