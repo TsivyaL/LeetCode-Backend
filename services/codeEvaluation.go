@@ -65,6 +65,7 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 		if errRun != nil {
 			log.Printf("Error running code: %v", errRun)
 			return false, errRun
+			
 		}
 
 		// Check if the result matches the expected output for each input
