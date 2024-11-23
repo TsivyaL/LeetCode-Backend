@@ -17,5 +17,6 @@ type Question struct {
     Inputs           [][]interface{}     `json:"inputs"`  // An array of arrays
     ExpectedOutputs  []interface{}       `json:"expected_outputs"`
     FunctionSignature string             `json:"function_signature"`
-     Status           string              `json:"status" bson:"status"`
+    Status           string              `json:"status" bson:"status"`
+    CodeInProgress  string             `json:"code_in_progress,omitempty"`
 }

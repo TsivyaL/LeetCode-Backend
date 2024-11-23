@@ -81,22 +81,26 @@ func CreateQuestion(c *gin.Context) {
 
 // UpdateQuestion updates an existing question
 func UpdateQuestionStatus(c *gin.Context) {
-    id := c.Param("id")
+    id := c.Param("id") // Get the question ID from the URL parameter
     var status struct {
-        Status string `json:"status"` 
+        Status         string `json:"status"`           // The new status of the question
+        CodeInProgress string `json:"code_in_progress"`  // Whether the code is still in progress
     }
 
+    // Check if there is an error while binding the JSON request body
     if err := c.ShouldBindJSON(&status); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
         return
     }
 
-    if err := services.UpdateQuestionStatus(id, status.Status); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+    // Call the UpdateQuestionStatus function with three arguments: ID, Status, and CodeInProgress
+    if err := services.UpdateQuestionStatus(id, status.Status, status.CodeInProgress); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status", "details": err.Error()})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "Question status updated"})
+    // Return success message if the status was updated successfully
+    c.JSON(http.StatusOK, gin.H{"message": "Question status updated successfully"})
 }
 
 

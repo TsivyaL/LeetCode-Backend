@@ -69,7 +69,7 @@ func AddQuestion(question models.Question) error {
 }
 
 // UpdateQuestion updates an existing question in the database
-func UpdateQuestionStatus(id string, status string) error {
+func UpdateQuestionStatus(id string, status string, codeInProgress string) error {
     // Convert string ID to ObjectId
     objID, err := primitive.ObjectIDFromHex(id)
     if err != nil {
@@ -80,6 +80,7 @@ func UpdateQuestionStatus(id string, status string) error {
     update := bson.M{
         "$set": bson.M{
             "status": status, // Update the status field
+            "code_in_progress": codeInProgress,
         },
     }
 
