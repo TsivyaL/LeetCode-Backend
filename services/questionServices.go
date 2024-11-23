@@ -55,6 +55,9 @@ func FetchQuestionByID(id string) (models.Question, error) {
 
 // AddQuestion adds a new question to the database
 func AddQuestion(question models.Question) error {
+    if question.Status == "" {
+        question.Status = models.StatusNotStarted
+    }
     // Convert the string ID to ObjectId if necessary
     if question.ID.IsZero() {
 		question.ID = primitive.NewObjectID() // יצירת ObjectId חדש
@@ -66,20 +69,29 @@ func AddQuestion(question models.Question) error {
 }
 
 // UpdateQuestion updates an existing question in the database
-func UpdateQuestion(id string, updatedQuestion models.Question) error {
+func UpdateQuestionStatus(id string, status string) error {
     // Convert string ID to ObjectId
     objID, err := primitive.ObjectIDFromHex(id)
     if err != nil {
         return errors.New("invalid ObjectId format")
     }
 
+    // Prepare update to only modify the "status" field
+    update := bson.M{
+        "$set": bson.M{
+            "status": status, // Update the status field
+        },
+    }
+
+    // Perform the update operation
     _, err = QuestionsCollection.UpdateOne(
         context.TODO(),
         bson.M{"_id": objID}, // Use ObjectId for matching
-        bson.M{"$set": updatedQuestion},
+        update,
     )
     return err
 }
+
 
 // DeleteQuestion deletes a question by its ID
 func DeleteQuestion(id string) error {

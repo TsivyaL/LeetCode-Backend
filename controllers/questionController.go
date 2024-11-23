@@ -80,21 +80,25 @@ func CreateQuestion(c *gin.Context) {
 }
 
 // UpdateQuestion updates an existing question
-func UpdateQuestion(c *gin.Context) {
-	id := c.Param("id")
-	var updatedQuestion models.Question
-	if err := c.ShouldBindJSON(&updatedQuestion); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+func UpdateQuestionStatus(c *gin.Context) {
+    id := c.Param("id")
+    var status struct {
+        Status string `json:"status"` 
+    }
 
-	if err := services.UpdateQuestion(id, updatedQuestion); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+    if err := c.ShouldBindJSON(&status); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
-	c.JSON(http.StatusOK, gin.H{"message": "Question updated"})
+    if err := services.UpdateQuestionStatus(id, status.Status); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Question status updated"})
 }
+
 
 // DeleteQuestion deletes a question by ID
 func DeleteQuestion(c *gin.Context) {

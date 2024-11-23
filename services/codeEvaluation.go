@@ -27,6 +27,12 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 		log.Printf("Error fetching question: %v", err)
 		return false, fmt.Errorf("error fetching question: %v", err)
 	}
+	// Update question status to "In Progress" before running code
+	err = updateQuestionStatusToInProgress(answer.QuestionID)
+	if err != nil {
+		log.Printf("Error updating question status to 'In Progress': %v", err)
+		return false, fmt.Errorf("error updating question status to 'In Progress': %v", err)
+	}
 
 	// Perform syntax validation before proceeding
 	if err := validateSyntax(answer.Language, answer.Code); err != nil {
@@ -70,7 +76,36 @@ func ExecuteAnswer(answer models.Answer) (bool, error) {
 	}
 
 	log.Printf("All tests passed successfully!")
+
+	// Update the status to "Completed" when all tests pass
+	err = updateQuestionStatusToCompleted(answer.QuestionID)
+	if err != nil {
+		log.Printf("Error updating question status: %v", err)
+		return false, fmt.Errorf("error updating question status: %v", err)
+	}
+
+	log.Printf("Question status updated to completed!")
 	return true, nil
+}
+func updateQuestionStatusToInProgress(questionID string) error {
+	// Assuming you have a function to update the question status in the database
+	// You would fetch the question and set its status to "In Progress"
+	err := UpdateQuestionStatus(questionID, "In Progress")
+	if err != nil {
+		return fmt.Errorf("failed to update question status to 'In Progress': %v", err)
+	}
+	return nil
+}
+
+// updateQuestionStatusToCompleted updates the status of the question to "Completed"
+func updateQuestionStatusToCompleted(questionID string) error {
+	// Assuming you have a function to update the question status in the database
+	// You would fetch the question and set its status to "Completed" or "Solved"
+	err := UpdateQuestionStatus(questionID, "Completed")
+	if err != nil {
+		return fmt.Errorf("failed to update question status: %v", err)
+	}
+	return nil
 }
 
 // validateSyntax checks if the provided code has syntax errors
