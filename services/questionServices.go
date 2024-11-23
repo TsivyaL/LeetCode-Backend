@@ -58,6 +58,10 @@ func AddQuestion(question models.Question) error {
     if question.Status == "" {
         question.Status = models.StatusNotStarted
     }
+    if question.CodeInProgress == "" {
+        question.CodeInProgress = ""
+    }
+
     // Convert the string ID to ObjectId if necessary
     if question.ID.IsZero() {
 		question.ID = primitive.NewObjectID() // יצירת ObjectId חדש
