@@ -105,9 +105,15 @@ func initializeQuestionsFromFile(filePath string) error {
 		}
 
 		// Handle inputs field
-		if inputs, ok := q["inputs"].([][]interface{}); ok {
-            q["inputs"] = inputs
-        }
+		if inputs, ok := q["inputs"].([]interface{}); ok {
+			// Convert the inputs into the expected format ([][]interface{})
+			question.Inputs = make([][]interface{}, len(inputs))
+			for i, input := range inputs {
+				if inputArr, ok := input.([]interface{}); ok {
+					question.Inputs[i] = inputArr
+				}
+			}
+		}
 
 		// Ensure 'expected_outputs' exists, if not initialize as empty array
 		if expectedOutputs, ok := q["expected_outputs"].([]interface{}); ok {
