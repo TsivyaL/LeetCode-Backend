@@ -2,11 +2,15 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -47,6 +51,11 @@ func SetupDB() error {
     MongoClient = client
     QuestionsCollection = client.Database("test").Collection("questions")
     log.Println("Connected to MongoDB!")
+    	// Initialize questions
+	err = initializeQuestionsFromFile("questions.json")
+	if err != nil {
+		log.Printf("Error initializing questions: %v", err)
+	}
     return nil
 
 }
@@ -58,4 +67,38 @@ func startMongoContainer() error {
     }
     log.Println("MongoDB container started successfully")
     return nil
+}
+// initializeQuestionsFromFile loads the questions from a JSON file and inserts them into the database
+func initializeQuestionsFromFile(filePath string) error {
+	// Read the JSON file
+	fileContent, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read questions file: %v", err)
+	}
+
+	// Parse JSON
+	var questions []interface{}
+	err = json.Unmarshal(fileContent, &questions)
+	if err != nil {
+		return fmt.Errorf("failed to parse questions JSON: %v", err)
+	}
+
+	// Check if questions collection is empty
+	count, err := QuestionsCollection.CountDocuments(context.TODO(), bson.D{})
+	if err != nil {
+		return fmt.Errorf("failed to count documents in questions collection: %v", err)
+	}
+
+	if count == 0 {
+		// Insert questions into the collection
+		_, err = QuestionsCollection.InsertMany(context.TODO(), questions)
+		if err != nil {
+			return fmt.Errorf("failed to insert questions into database: %v", err)
+		}
+		log.Println("Questions initialized successfully.")
+	} else {
+		log.Println("Questions already exist in the database.")
+	}
+
+	return nil
 }

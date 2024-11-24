@@ -1,0 +1,142 @@
+[
+    {
+        "id": "673eec472234e597a486e706",
+        "title": "Sum of 2 nums",
+        "body": "a + b",
+        "inputs": [
+            [1, 2],
+            [5, 6],
+            [10, 15]
+        ],
+        "expected_outputs": [3, 11, 25],
+        "function_signature": "a, b",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "892fec472234e597a486e707",
+        "title": "Multiply two numbers",
+        "body": "a * b",
+        "inputs": [
+            [3, 4],
+            [7, 8],
+            [2, 10]
+        ],
+        "expected_outputs": [12, 56, 20],
+        "function_signature": "a, b",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "56adcc472234e597a486e708",
+        "title": "Find max of three numbers",
+        "body": "Find the maximum of a, b, c",
+        "inputs": [
+            [3, 9, 5],
+            [7, 2, 10],
+            [1, 1, 1]
+        ],
+        "expected_outputs": [9, 10, 1],
+        "function_signature": "a, b, c",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "92acec472234e597a486e709",
+        "title": "Is number even?",
+        "body": "Return True if n is even, False otherwise",
+        "inputs": [
+            [2],
+            [7],
+            [10]
+        ],
+        "expected_outputs": [true, false, true],
+        "function_signature": "n",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "83adbc472234e597a486e710",
+        "title": "Reverse a string",
+        "body": "Return the reverse of the input string s",
+        "inputs": [
+            ["hello"],
+            ["world"],
+            ["abc"]
+        ],
+        "expected_outputs": ["olleh", "dlrow", "cba"],
+        "function_signature": "s",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "67abcd472234e597a486e711",
+        "title": "Is prime?",
+        "body": "Check if a number n is prime",
+        "inputs": [
+            [2],
+            [4],
+            [13]
+        ],
+        "expected_outputs": [true, false, true],
+        "function_signature": "n",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "72adef472234e597a486e712",
+        "title": "String concatenation",
+        "body": "Return the concatenation of strings a and b",
+        "inputs": [
+            ["hello", "world"],
+            ["foo", "bar"],
+            ["code", "test"]
+        ],
+        "expected_outputs": ["helloworld", "foobar", "codetest"],
+        "function_signature": "a, b",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "84aacc472234e597a486e713",
+        "title": "Find length of string",
+        "body": "Return the length of string s",
+        "inputs": [
+            ["hello"],
+            ["abcd"],
+            ["12345"]
+        ],
+        "expected_outputs": [5, 4, 5],
+        "function_signature": "s",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "93abcf472234e597a486e714",
+        "title": "Square a number",
+        "body": "Return the square of number n",
+        "inputs": [
+            [2],
+            [3],
+            [4]
+        ],
+        "expected_outputs": [4, 9, 16],
+        "function_signature": "n",
+        "status": "Not Started",
+        "code_in_progress": ""
+    },
+    {
+        "id": "65aadc472234e597a486e715",
+        "title": "Convert to uppercase",
+        "body": "Convert string s to uppercase",
+        "inputs": [
+            ["hello"],
+            ["world"],
+            ["test"]
+        ],
+        "expected_outputs": ["HELLO", "WORLD", "TEST"],
+        "function_signature": "s",
+        "status": "Not Started",
+        "code_in_progress": ""
+    }
+]
