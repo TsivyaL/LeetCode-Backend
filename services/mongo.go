@@ -78,12 +78,12 @@ func startMongoContainer() error {
 // initializeQuestionsFromFile loads the questions from a JSON file and inserts them into the database
 func initializeQuestionsFromFile(filePath string) error {
 	// Check if questions are already initialized
-	var initStatus bson.M
-	err := MetaCollection.FindOne(context.TODO(), bson.M{"key": "questions_initialized"}).Decode(&initStatus)
-	if err == nil {
-		log.Println("Questions already initialized. Skipping.")
-		return nil
-	}
+	// var initStatus bson.M
+	// err := MetaCollection.FindOne(context.TODO(), bson.M{"key": "questions_initialized"}).Decode(&initStatus)
+	// if err == nil {
+	// 	log.Println("Questions already initialized. Skipping.")
+	// 	return nil
+	// }
 
 	// Read the JSON file
 	fileContent, err := os.ReadFile(filePath)
