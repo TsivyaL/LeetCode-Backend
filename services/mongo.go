@@ -14,6 +14,7 @@ import (
 
 	// "go.mongodb.org/mongo-driver/bson"
 	// "go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -78,6 +79,14 @@ func startMongoContainer() error {
 
 // initializeQuestionsFromFile loads the questions from a JSON file and inserts them into the database
 func initializeQuestionsFromFile(filePath string) error {
+    // Check if questions are already initialized
+	var initStatus bson.M
+	err := MetaCollection.FindOne(context.TODO(), bson.M{"key": "questions_initialized"}).Decode(&initStatus)
+	if err == nil {
+		log.Println("Questions already initialized. Skipping.")
+		return nil
+	}
+
 	// Read the JSON file
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
@@ -137,7 +146,10 @@ func initializeQuestionsFromFile(filePath string) error {
 			return fmt.Errorf("failed to add question to database: %v", err)
 		}
 	}
-
+    // Mark questions as initialized
+	_, err = MetaCollection.InsertOne(context.TODO(), bson.M{"key": "questions_initialized", "timestamp": time.Now()})
+	if err != nil {
+		return fmt.Errorf("failed to mark questions as initialized: %v", err)
 	log.Println("Questions initialized successfully.")
 	return nil
 }
