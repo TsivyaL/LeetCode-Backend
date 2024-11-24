@@ -1,28 +1,5 @@
 [
     {
-        "title": "Sum of 2 nums",
-        "body": "a + b",
-        "inputs": [
-            [1, 2],
-            [5, 6],
-            [10, 15]
-        ],
-        "expected_outputs": [3, 11, 25],
-        "function_signature": "a, b"
-
-    },
-    {
-        "title": "Multiply two numbers",
-        "body": "a * b",
-        "inputs": [
-            [3, 4],
-            [7, 8],
-            [2, 10]
-        ],
-        "expected_outputs": [12, 56, 20],
-        "function_signature": "a, b"
-    },
-    {
      
         "title": "Find max of three numbers",
         "body": "Find the maximum of a, b, c",
