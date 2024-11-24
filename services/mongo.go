@@ -77,14 +77,6 @@ func startMongoContainer() error {
 
 // initializeQuestionsFromFile loads the questions from a JSON file and inserts them into the database
 func initializeQuestionsFromFile(filePath string) error {
-	// Check if questions are already initialized
-	// var initStatus bson.M
-	// err := MetaCollection.FindOne(context.TODO(), bson.M{"key": "questions_initialized"}).Decode(&initStatus)
-	// if err == nil {
-	// 	log.Println("Questions already initialized. Skipping.")
-	// 	return nil
-	// }
-
 	// Read the JSON file
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
@@ -92,7 +84,7 @@ func initializeQuestionsFromFile(filePath string) error {
 	}
 
 	// Parse JSON
-	var rawQuestions []map[string]interface{} // Use a map instead of interface{} for better control
+	var rawQuestions []map[string]interface{}
 	err = json.Unmarshal(fileContent, &rawQuestions)
 	if err != nil {
 		return fmt.Errorf("failed to parse questions JSON: %v", err)
@@ -107,13 +99,25 @@ func initializeQuestionsFromFile(filePath string) error {
 				return fmt.Errorf("failed to convert id to ObjectID: %v", err)
 			}
 			q["id"] = id // Update the ID in the map to the ObjectID
-
-			// Handle inputs: convert them to the proper format if necessary
-			if inputs, ok := q["inputs"].([]interface{}); ok {
-				// Verify inputs structure here (optional, depending on the JSON format)
-				q["inputs"] = inputs // If needed, transform inputs to match the expected structure
-			}
 		}
+
+		// Ensure 'inputs' is an array (already done in the original code)
+		if inputs, ok := q["inputs"].([]interface{}); ok {
+			q["inputs"] = inputs
+		}
+
+		// Ensure 'expected_outputs' exists, if not initialize as empty array
+		if _, ok := q["expected_outputs"]; !ok {
+			q["expected_outputs"] = []interface{}{}
+		}
+
+		// Ensure 'function_signature' exists, if not initialize as an empty string
+		if _, ok := q["function_signature"]; !ok {
+            log.Println("function_signature = null" )
+			q["function_signature"] = ""
+		}
+
+		// Append the question to the list
 		questions = append(questions, q)
 	}
 
@@ -132,3 +136,4 @@ func initializeQuestionsFromFile(filePath string) error {
 
 	return nil
 }
+
