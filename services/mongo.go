@@ -1,6 +1,7 @@
 package services
 
 import (
+	"Backend/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,8 +12,8 @@ import (
 	"os/exec"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/bson"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -90,50 +91,47 @@ func initializeQuestionsFromFile(filePath string) error {
 		return fmt.Errorf("failed to parse questions JSON: %v", err)
 	}
 
-	var questions []interface{}
 	for _, q := range rawQuestions {
 		// Convert the string id to primitive.ObjectID
-		if idStr, ok := q["id"].(string); ok {
-			id, err := primitive.ObjectIDFromHex(idStr)
-			if err != nil {
-				return fmt.Errorf("failed to convert id to ObjectID: %v", err)
-			}
-			q["id"] = id // Update the ID in the map to the ObjectID
+		var question models.Question
+
+		
+		// Handle title and body fields
+		if title, ok := q["title"].(string); ok {
+			question.Title = title
+		}
+		if body, ok := q["body"].(string); ok {
+			question.Body = body
 		}
 
-		// Ensure 'inputs' is an array (already done in the original code)
-		if inputs, ok := q["inputs"].([]interface{}); ok {
-			q["inputs"] = inputs
-		}
+		// Handle inputs field
+		if inputs, ok := q["inputs"].([][]interface{}); ok {
+            q["inputs"] = inputs
+        }
 
 		// Ensure 'expected_outputs' exists, if not initialize as empty array
-		if _, ok := q["expected_outputs"]; !ok {
-			q["expected_outputs"] = []interface{}{}
+		if expectedOutputs, ok := q["expected_outputs"].([]interface{}); ok {
+			question.ExpectedOutputs = expectedOutputs
+		} else {
+			question.ExpectedOutputs = []interface{}{}
 		}
 
 		// Ensure 'function_signature' exists, if not initialize as an empty string
-		if _, ok := q["function_signature"]; !ok {
-            log.Println("function_signature = null" )
-			q["function_signature"] = ""
+		if functionSignature, ok := q["function_signature"].(string); ok {
+			question.FunctionSignature = functionSignature
+		} else {
+			question.FunctionSignature = ""
 		}
 
-		// Append the question to the list
-		questions = append(questions, q)
+
+		
+		// Add question to the database
+		err := AddQuestion(question)
+		if err != nil {
+			return fmt.Errorf("failed to add question to database: %v", err)
+		}
 	}
 
-	// Insert questions into the collection
-	_, err = QuestionsCollection.InsertMany(context.TODO(), questions)
-	if err != nil {
-		return fmt.Errorf("failed to insert questions into database: %v", err)
-	}
 	log.Println("Questions initialized successfully.")
-
-	// Mark questions as initialized
-	_, err = MetaCollection.InsertOne(context.TODO(), bson.M{"key": "questions_initialized", "timestamp": time.Now()})
-	if err != nil {
-		return fmt.Errorf("failed to mark questions as initialized: %v", err)
-	}
-
 	return nil
 }
-
