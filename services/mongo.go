@@ -78,8 +78,9 @@ func startMongoContainer() error {
 }
 
 // initializeQuestionsFromFile loads the questions from a JSON file and inserts them into the database
+// initializeQuestionsFromFile loads the questions from a JSON file and inserts them into the database
 func initializeQuestionsFromFile(filePath string) error {
-    // Check if questions are already initialized
+	// Check if questions are already initialized
 	var initStatus bson.M
 	err := MetaCollection.FindOne(context.TODO(), bson.M{"key": "questions_initialized"}).Decode(&initStatus)
 	if err == nil {
@@ -104,7 +105,6 @@ func initializeQuestionsFromFile(filePath string) error {
 		// Convert the string id to primitive.ObjectID
 		var question models.Question
 
-		
 		// Handle title and body fields
 		if title, ok := q["title"].(string); ok {
 			question.Title = title
@@ -138,18 +138,19 @@ func initializeQuestionsFromFile(filePath string) error {
 			question.FunctionSignature = ""
 		}
 
-
-		
 		// Add question to the database
 		err := AddQuestion(question)
 		if err != nil {
 			return fmt.Errorf("failed to add question to database: %v", err)
 		}
 	}
-    // Mark questions as initialized
+
+	// Mark questions as initialized
 	_, err = MetaCollection.InsertOne(context.TODO(), bson.M{"key": "questions_initialized", "timestamp": time.Now()})
 	if err != nil {
 		return fmt.Errorf("failed to mark questions as initialized: %v", err)
+	}
+
 	log.Println("Questions initialized successfully.")
 	return nil
 }
