@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	// "io/ioutil"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -90,10 +92,29 @@ func initializeQuestionsFromFile(filePath string) error {
 	}
 
 	// Parse JSON
-	var questions []interface{}
-	err = json.Unmarshal(fileContent, &questions)
+	var rawQuestions []map[string]interface{} // Use a map instead of interface{} for better control
+	err = json.Unmarshal(fileContent, &rawQuestions)
 	if err != nil {
 		return fmt.Errorf("failed to parse questions JSON: %v", err)
+	}
+
+	var questions []interface{}
+	for _, q := range rawQuestions {
+		// Convert the string id to primitive.ObjectID
+		if idStr, ok := q["id"].(string); ok {
+			id, err := primitive.ObjectIDFromHex(idStr)
+			if err != nil {
+				return fmt.Errorf("failed to convert id to ObjectID: %v", err)
+			}
+			q["id"] = id // Update the ID in the map to the ObjectID
+
+			// Handle inputs: convert them to the proper format if necessary
+			if inputs, ok := q["inputs"].([]interface{}); ok {
+				// Verify inputs structure here (optional, depending on the JSON format)
+				q["inputs"] = inputs // If needed, transform inputs to match the expected structure
+			}
+		}
+		questions = append(questions, q)
 	}
 
 	// Insert questions into the collection
